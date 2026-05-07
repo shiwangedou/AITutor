@@ -5,6 +5,14 @@ settings:
   base:
     SWIFT_VERSION: 5.10
     IPHONEOS_DEPLOYMENT_TARGET: 16.0
+    BACKEND_BASE_URL: http://192.168.0.102:8000
+packages:
+  LiveKit:
+    url: https://github.com/livekit/client-sdk-swift.git
+    from: 2.13.0
+  SnapKit:
+    url: https://github.com/SnapKit/SnapKit.git
+    from: 5.7.1
 targets:
   AITutor:
     type: application
@@ -13,6 +21,9 @@ targets:
       - AITutor
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.sansan.AITutor
+        DEVELOPMENT_TEAM: MKDWSCTD3X
+        PRODUCT_BUNDLE_IDENTIFIER: ai.jovida.ha
         INFOPLIST_FILE: AITutor/App/Info.plist
-    dependencies: []
+    dependencies:
+      - package: LiveKit
+      - package: SnapKit

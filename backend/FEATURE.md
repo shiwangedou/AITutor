@@ -53,3 +53,4 @@ Provide the minimal backend and LiveKit voice agent needed for the realtime Engl
 - 2026-05-06: Added real LiveKit Agents scaffold using LiveKit Inference STT/LLM/TTS.
 - 2026-05-06: Added backend diagnostics script with structured logs.
 - 2026-05-06: Added backend setup/start scripts for local demo startup.
+- 2026-05-08: Added low-latency model tuning (`STT_MODEL`, `LLM_MODEL`, `LLM_MAX_TOKENS`, `PREEMPTIVE_TTS`, `TTS_*`), switched defaults to `deepgram/flux-general`, `openai/gpt-4.1-nano`, and `cartesia/sonic-turbo`, enabled latency metrics, and tightened tutor replies to reduce slow feedback.

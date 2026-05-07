@@ -7,11 +7,14 @@ ROOT_DIR="$(cd "$BACKEND_DIR/.." && pwd)"
 LOG_DIR="$ROOT_DIR/logs"
 API_LOG="$LOG_DIR/api.log"
 AGENT_LOG="$LOG_DIR/agent.log"
+IOS_START_SCRIPT="$ROOT_DIR/ios/scripts/start_ios.sh"
+CLEAR_LOGS_SCRIPT="$ROOT_DIR/clear_logs.sh"
 
 API_PID=""
 AGENT_PID=""
 API_READY_TIMEOUT="${API_READY_TIMEOUT:-30}"
 AGENT_READY_TIMEOUT="${AGENT_READY_TIMEOUT:-60}"
+START_IOS_APP="${START_IOS_APP:-1}"
 
 log() {
   printf '[dev] %s\n' "$1"
@@ -59,9 +62,13 @@ wait_for_agent() {
 }
 
 cd "$BACKEND_DIR"
-mkdir -p "$LOG_DIR"
-: > "$API_LOG"
-: > "$AGENT_LOG"
+if [[ -x "$CLEAR_LOGS_SCRIPT" ]]; then
+  "$CLEAR_LOGS_SCRIPT"
+else
+  mkdir -p "$LOG_DIR"
+  : > "$API_LOG"
+  : > "$AGENT_LOG"
+fi
 
 log "Writing API logs to $API_LOG"
 log "Writing agent logs to $AGENT_LOG"
@@ -81,6 +88,13 @@ wait_for_agent
 log "API PID: $API_PID"
 log "Agent PID: $AGENT_PID"
 log "All backend services ready"
+if [[ "$START_IOS_APP" == "1" && -x "$IOS_START_SCRIPT" ]]; then
+  log "Starting iOS helper"
+  "$IOS_START_SCRIPT" || log "iOS helper failed; backend services are still running"
+elif [[ "$START_IOS_APP" != "1" ]]; then
+  log "START_IOS_APP=$START_IOS_APP; skipping iOS helper"
+fi
+
 log "Press Ctrl+C to stop both services"
 log "Optional: run ./check_backend.sh from project root for a full diagnostic pass"
 
