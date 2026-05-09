@@ -31,7 +31,7 @@ cd backend
 ./scripts/start_all.sh
 ```
 
-The combined startup writes logs to:
+The combined startup first stops stale local `uvicorn main:app` and `agent.py dev` processes, then writes logs to:
 - `../logs/api.log`
 - `../logs/agent.log`
 
@@ -68,6 +68,6 @@ python tests/diagnose_backend.py --verbose
 - `setup.sh` 创建 `.venv`、安装依赖、下载 agent 模型文件。
 - `start_api.sh` 启动 FastAPI。
 - `start_agent.sh` 启动 LiveKit agent dev 模式。
-- `start_all.sh` 同时启动 API 和 agent，将日志写入根目录 `logs/`，等待 API 和 agent ready，并在 Ctrl+C 时停止两个进程。
+- `start_all.sh` 会先停止旧的本地 `uvicorn main:app` 和 `agent.py dev` 进程，再同时启动 API 和 agent，将日志写入根目录 `logs/`，等待 API 和 agent ready，并在 Ctrl+C 时停止两个进程。
 - 根目录 `./clear_logs.sh` 会清空这些 runtime log 的内容但不删除文件；Xcode Debug 构建/运行前也会调用同一个脚本。
 - 根目录 `./check_audio_health.sh` 会扫描 agent log，总结 TTS 卡顿、麦克风轨道和输入流 warning。

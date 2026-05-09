@@ -14,6 +14,10 @@ struct TranscriptUpdate: Equatable {
 }
 
 protocol LiveKitAgentControlling {
+    var isConnected: Bool { get }
+    var isMicrophoneStarted: Bool { get }
+    var diagnosticSummary: String { get }
+
     func setTranscriptHandler(_ handler: @escaping @MainActor (TranscriptUpdate) -> Void)
     func connect(using config: SessionConfig) async throws
     func startMicrophone() async throws
@@ -26,6 +30,17 @@ final class LiveKitAgentClient: NSObject, LiveKitAgentControlling, RoomDelegate,
     private let room = Room()
     private var lastConfig: SessionConfig?
     private var transcriptHandler: (@MainActor (TranscriptUpdate) -> Void)?
+    private(set) var isConnected = false
+    private(set) var isMicrophoneStarted = false
+
+    var diagnosticSummary: String {
+        [
+            "connected=\(isConnected)",
+            "microphoneStarted=\(isMicrophoneStarted)",
+            "room=\(lastConfig?.roomName ?? "none")",
+            "identity=\(lastConfig?.participantIdentity ?? "none")"
+        ].joined(separator: " | ")
+    }
 
     override init() {
         super.init()
@@ -46,8 +61,10 @@ final class LiveKitAgentClient: NSObject, LiveKitAgentControlling, RoomDelegate,
 
         do {
             try await room.connect(url: config.livekitURL, token: config.token)
+            isConnected = true
             AppLogger.debug("Connected LiveKit room=\(config.roomName)", category: .livekit)
         } catch {
+            isConnected = false
             throw AppError.liveKitConnectFailed(AppLogger.describe(error))
         }
     }
@@ -57,14 +74,16 @@ final class LiveKitAgentClient: NSObject, LiveKitAgentControlling, RoomDelegate,
 
         do {
             try await room.localParticipant.setMicrophone(enabled: true)
+            isMicrophoneStarted = true
             AppLogger.debug("LiveKit microphone publish started", category: .livekit)
         } catch {
+            isMicrophoneStarted = false
             throw AppError.microphonePublishFailed(AppLogger.describe(error))
         }
     }
 
     func startConversation() async throws {
-        let prompt = "Start the English speaking practice now. Greet me briefly and ask one easy warm-up question."
+        let prompt = "Say exactly one short sentence: Hi! Ready?"
         AppLogger.debug("Sending start-conversation signal to LiveKit agent", category: .livekit)
         try await sendText(prompt)
         AppLogger.debug("Start-conversation signal sent", category: .livekit)
@@ -87,6 +106,8 @@ final class LiveKitAgentClient: NSObject, LiveKitAgentControlling, RoomDelegate,
         let roomName = lastConfig?.roomName ?? "unknown"
         AppLogger.debug("Disconnecting LiveKit room=\(roomName)", category: .livekit)
         await room.disconnect()
+        isConnected = false
+        isMicrophoneStarted = false
         AppLogger.debug("Disconnected LiveKit room=\(roomName)", category: .livekit)
     }
 

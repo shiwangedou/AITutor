@@ -1,5 +1,13 @@
 import Foundation
 
+enum SessionSummaryStatus: String, Codable, Equatable {
+    case localOnly
+    case generating
+    case completed
+    case unavailable
+    case failed
+}
+
 struct SessionRecord: Codable, Equatable, Identifiable {
     let id: String
     let roomName: String
@@ -9,4 +17,6 @@ struct SessionRecord: Codable, Equatable, Identifiable {
     let durationSeconds: TimeInterval
     let status: SessionState
     let summary: String
+    let aiSummary: String?
+    let aiSummaryStatus: SessionSummaryStatus?
 }

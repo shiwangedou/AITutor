@@ -8,6 +8,14 @@ sync_visible_env() {
 
   if [[ -f "$visible_env" ]]; then
     cp "$visible_env" "$dot_env"
+    if [[ -n "${VOICE_PIPELINE_PROFILE:-}" ]]; then
+      if grep -q '^VOICE_PIPELINE_PROFILE=' "$dot_env"; then
+        sed -i.bak "s/^VOICE_PIPELINE_PROFILE=.*/VOICE_PIPELINE_PROFILE=$VOICE_PIPELINE_PROFILE/" "$dot_env"
+        rm -f "$dot_env.bak"
+      else
+        printf '\nVOICE_PIPELINE_PROFILE=%s\n' "$VOICE_PIPELINE_PROFILE" >> "$dot_env"
+      fi
+    fi
     printf '[%s] Synced root env -> .env\n' "$label"
     return 0
   fi

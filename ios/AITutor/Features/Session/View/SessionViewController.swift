@@ -13,6 +13,8 @@ final class SessionViewController: UIViewController {
     private let connectionLabel = UILabel()
     private let errorLabel = UILabel()
     private let summaryLabel = UILabel()
+    private let runningSummaryTitleLabel = UILabel()
+    private let runningSummaryView = UITextView()
     private let transcriptTitleLabel = UILabel()
     private let transcriptView = UITextView()
     private let logTitleLabel = UILabel()
@@ -81,6 +83,18 @@ final class SessionViewController: UIViewController {
         summaryLabel.backgroundColor = .tertiarySystemBackground
         summaryLabel.layer.cornerRadius = 10
         summaryLabel.layer.masksToBounds = true
+
+        runningSummaryTitleLabel.text = "AI Summary Draft"
+        runningSummaryTitleLabel.font = .preferredFont(forTextStyle: .headline)
+        runningSummaryTitleLabel.adjustsFontForContentSizeCategory = true
+
+        runningSummaryView.isEditable = false
+        runningSummaryView.isScrollEnabled = true
+        runningSummaryView.layer.cornerRadius = 12
+        runningSummaryView.backgroundColor = .secondarySystemBackground
+        runningSummaryView.textContainerInset = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
+        runningSummaryView.font = .preferredFont(forTextStyle: .footnote)
+        runningSummaryView.adjustsFontForContentSizeCategory = true
 
         transcriptTitleLabel.text = "Transcript"
         transcriptTitleLabel.font = .preferredFont(forTextStyle: .headline)
@@ -153,6 +167,8 @@ final class SessionViewController: UIViewController {
             secondaryButtons,
             textInputStack,
             summaryLabel,
+            runningSummaryTitleLabel,
+            runningSummaryView,
             transcriptTitleLabel,
             transcriptView,
             logTitleLabel,
@@ -189,6 +205,10 @@ final class SessionViewController: UIViewController {
         transcriptView.snp.makeConstraints { make in
             make.height.equalTo(150)
         }
+
+        runningSummaryView.snp.makeConstraints { make in
+            make.height.equalTo(120)
+        }
     }
 
     private func bindViewModel() {
@@ -201,6 +221,7 @@ final class SessionViewController: UIViewController {
         stateLabel.text = state.statusText
         connectionLabel.text = state.connectionText
         summaryLabel.text = "  \(state.latestSummaryText)  "
+        runningSummaryView.text = state.runningSummaryText
         transcriptView.text = state.transcriptText
         logView.text = state.logText
         errorLabel.text = state.errorText
@@ -222,6 +243,8 @@ final class SessionViewController: UIViewController {
         logView.scrollRangeToVisible(range)
         let transcriptRange = NSRange(location: max(transcriptView.text.count - 1, 0), length: 0)
         transcriptView.scrollRangeToVisible(transcriptRange)
+        let summaryRange = NSRange(location: max(runningSummaryView.text.count - 1, 0), length: 0)
+        runningSummaryView.scrollRangeToVisible(summaryRange)
     }
 
     private func configurePrimary(_ button: UIButton, title: String) {

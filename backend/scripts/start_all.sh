@@ -61,7 +61,57 @@ wait_for_agent() {
   fail "Agent did not register worker within ${AGENT_READY_TIMEOUT}s. Check $AGENT_LOG"
 }
 
+stop_existing_agent_processes() {
+  local existing_agents
+  existing_agents="$(pgrep -fl "agent.py dev" 2>/dev/null || true)"
+  if [[ -n "$existing_agents" ]]; then
+    log "Existing LiveKit agent process found; stopping it to avoid duplicate tutor voices"
+    printf '%s\n' "$existing_agents" >&2
+    pkill -TERM -f "agent.py dev" 2>/dev/null || true
+    sleep 1
+    existing_agents="$(pgrep -fl "agent.py dev" 2>/dev/null || true)"
+    if [[ -n "$existing_agents" ]]; then
+      log "Existing agent did not stop after TERM; forcing shutdown"
+      printf '%s\n' "$existing_agents" >&2
+      pkill -KILL -f "agent.py dev" 2>/dev/null || true
+      sleep 1
+      existing_agents="$(pgrep -fl "agent.py dev" 2>/dev/null || true)"
+      if [[ -n "$existing_agents" ]]; then
+        printf '%s\n' "$existing_agents" >&2
+        fail "Could not stop existing LiveKit agent process. Stop it manually, then rerun ./start_all.sh."
+      fi
+    fi
+  fi
+}
+
+stop_existing_api_processes() {
+  local port="${BACKEND_PORT:-8000}"
+  local existing_apis
+  existing_apis="$(pgrep -fl "uvicorn main:app.*--port ${port}" 2>/dev/null || true)"
+  if [[ -n "$existing_apis" ]]; then
+    log "Existing backend API process found on port $port; stopping it before clean restart"
+    printf '%s\n' "$existing_apis" >&2
+    pkill -TERM -f "uvicorn main:app.*--port ${port}" 2>/dev/null || true
+    sleep 1
+    existing_apis="$(pgrep -fl "uvicorn main:app.*--port ${port}" 2>/dev/null || true)"
+    if [[ -n "$existing_apis" ]]; then
+      log "Existing backend API did not stop after TERM; forcing shutdown"
+      printf '%s\n' "$existing_apis" >&2
+      pkill -KILL -f "uvicorn main:app.*--port ${port}" 2>/dev/null || true
+      sleep 1
+      existing_apis="$(pgrep -fl "uvicorn main:app.*--port ${port}" 2>/dev/null || true)"
+      if [[ -n "$existing_apis" ]]; then
+        printf '%s\n' "$existing_apis" >&2
+        fail "Could not stop existing backend API process. Stop it manually, then rerun ./start_all.sh."
+      fi
+    fi
+  fi
+}
+
 cd "$BACKEND_DIR"
+stop_existing_api_processes
+stop_existing_agent_processes
+
 if [[ -x "$CLEAR_LOGS_SCRIPT" ]]; then
   "$CLEAR_LOGS_SCRIPT"
 else

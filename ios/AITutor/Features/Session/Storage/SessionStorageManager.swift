@@ -8,11 +8,13 @@ protocol SessionStorageManaging {
 
 final class SessionStorageManager: SessionStorageManaging {
     private let maxRecords: Int
+    private let fileManager: FileManager
     private let fileURL: URL
 
-    init(maxRecords: Int = 20, fileManager: FileManager = .default) {
+    init(maxRecords: Int = 20, fileManager: FileManager = .default, directoryURL: URL? = nil) {
         self.maxRecords = maxRecords
-        let directory = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        self.fileManager = fileManager
+        let directory = directoryURL ?? fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? fileManager.temporaryDirectory
         let appDirectory = directory.appendingPathComponent("AITutor", isDirectory: true)
         try? fileManager.createDirectory(at: appDirectory, withIntermediateDirectories: true)
@@ -50,8 +52,8 @@ final class SessionStorageManager: SessionStorageManaging {
 
     func clear() throws {
         do {
-            if FileManager.default.fileExists(atPath: fileURL.path) {
-                try FileManager.default.removeItem(at: fileURL)
+            if fileManager.fileExists(atPath: fileURL.path) {
+                try fileManager.removeItem(at: fileURL)
             }
             AppLogger.debug("Cleared local session history", category: .storage)
         } catch {

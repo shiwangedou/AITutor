@@ -63,6 +63,8 @@ def check_env() -> bool:
 
     tutor_subject = os.getenv("TUTOR_SUBJECT") or values.get("TUTOR_SUBJECT", "english-speaking")
     log("INFO", f"TUTOR_SUBJECT={tutor_subject}")
+    voice_profile = os.getenv("VOICE_PIPELINE_PROFILE") or values.get("VOICE_PIPELINE_PROFILE", "smooth")
+    log("INFO", f"VOICE_PIPELINE_PROFILE={voice_profile}")
     return ok
 
 
@@ -176,6 +178,69 @@ def check_backend_api(base_url: str, verbose: bool) -> bool:
         ok = False
     except Exception as exc:
         log("FAIL", f"/session request failed: {exc}")
+        ok = False
+
+    summary_body = {
+        "session_id": "diagnostics-summary",
+        "tutor_subject": "english-speaking",
+        "duration_seconds": 42,
+        "transcript": "You: Hello, I am practicing English.\nTutor: Nice start. What did you do today?",
+        "running_summary": "Diagnostics running summary draft.",
+    }
+    try:
+        status, payload = request_json(
+            f"{base_url}/summary",
+            method="POST",
+            body=summary_body,
+            timeout=20,
+        )
+        required = ["summary", "strengths", "corrections", "next_steps"]
+        missing = [key for key in required if key not in payload]
+        if status == 200 and not missing:
+            log("OK", "/summary returned required payload shape")
+            log("INFO", f"summary_length={len(payload.get('summary', ''))}")
+        else:
+            log("FAIL", f"/summary missing keys: {missing}")
+            ok = False
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        log("FAIL", f"/summary returned HTTP {exc.code}: {body}")
+        ok = False
+    except Exception as exc:
+        log("FAIL", f"/summary request failed: {exc}")
+        ok = False
+
+    incremental_body = {
+        "session_id": "diagnostics-summary",
+        "tutor_subject": "english-speaking",
+        "previous_summary": "The learner started an English practice session.",
+        "new_turns": [
+            "You: I visited a museum today.",
+            "Tutor: Good sentence. Try saying: I went to a museum today.",
+        ],
+        "finalize": False,
+    }
+    try:
+        status, payload = request_json(
+            f"{base_url}/summary/incremental",
+            method="POST",
+            body=incremental_body,
+            timeout=20,
+        )
+        required = ["summary", "strengths", "corrections", "next_steps"]
+        missing = [key for key in required if key not in payload]
+        if status == 200 and not missing:
+            log("OK", "/summary/incremental returned required payload shape")
+            log("INFO", f"running_summary_length={len(payload.get('summary', ''))}")
+        else:
+            log("FAIL", f"/summary/incremental missing keys: {missing}")
+            ok = False
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        log("FAIL", f"/summary/incremental returned HTTP {exc.code}: {body}")
+        ok = False
+    except Exception as exc:
+        log("FAIL", f"/summary/incremental request failed: {exc}")
         ok = False
 
     return ok

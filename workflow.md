@@ -145,10 +145,10 @@ Current verified items:
 - LiveKit Silero and turn-detector model files download successfully.
 - Backend `/health` returns `{ "status": "ok" }` in local smoke testing.
 - Backend `/session` returns `livekit_url`, `token`, `room_name`, `participant_identity`, and session metadata with dummy local env values.
-- Backend diagnostics script exists at `backend/tests/diagnose_backend.py`, prints structured logs, masks tokens/secrets, and passes both `--skip-api` and full localhost API checks with dummy env values.
-- Backend local startup scripts exist for setup, API server, agent dev mode, and combined startup; root `start_all.sh` is the reviewer-facing entrypoint, clears and writes API/agent logs to `logs/`, waits for API health and agent `registered worker`, and scripts sync Finder-visible `env` to runtime `.env`.
+- Backend diagnostics script exists at `backend/tests/diagnose_backend.py`, prints structured logs, masks tokens/secrets, checks `/summary` and `/summary/incremental` response shape when the API is running, and passes `--skip-api`.
+- Backend local startup scripts exist for setup, API server, agent dev mode, and combined startup; root `start_all.sh` is the reviewer-facing entrypoint, stops stale local `uvicorn main:app` and `agent.py dev` processes before launch, clears and writes API/agent logs to `logs/`, waits for API health and agent `registered worker`, and scripts sync Finder-visible `env` to runtime `.env`.
 - Root `clear_logs.sh` truncates runtime logs safely, and the iOS Xcode target runs it in Debug builds before app launch so each Cmd+R starts with fresh API/agent logs.
-- Root `check_audio_health.sh` summarizes audio-specific agent log evidence such as slow TTS generation, microphone-track presence, and repeated input-speech warnings.
+- Root `check_audio_health.sh` summarizes audio-specific agent log evidence such as the active voice profile, slow TTS generation, stale balanced-buffer evidence, smooth-buffer evidence, microphone-track presence, and repeated input-speech warnings.
 - Root `check_backend.sh` verifies backend diagnostics and checks `logs/agent.log` for `registered worker`.
 - iOS project resolves Swift Package dependencies for LiveKit Swift SDK, SnapKit, SwiftProtobuf, LiveKitWebRTC, and LiveKitUniFFI.
 - Generic iOS Debug build succeeds with `xcodebuild -project ios/AITutor.xcodeproj -scheme AITutor -configuration Debug -destination 'generic/platform=iOS' build`.
@@ -156,6 +156,7 @@ Current verified items:
 - Tutor speech no longer starts on room join; iOS sends a start-conversation signal only after `Start Session` publishes the microphone.
 - iOS listens for LiveKit transcription segments through `RoomDelegate`, merges partial/final updates by segment ID, and displays lightweight `You` / `Tutor` transcript lines in the Session screen.
 - Typed fallback messages are displayed immediately as `You` transcript lines so the UI path can be validated even before voice transcription arrives.
+- `Info.plist` declares `UIBackgroundModes=audio`, `SceneDelegate` emits `[test]` background/foreground lifecycle logs, `AudioSessionManager` logs interruption/route-change diagnostics, and `LiveKitAgentClient` exposes secret-safe connection/microphone diagnostics for foreground recovery validation.
 - iOS has been refactored into MVVM and layers: `App`, `Core`, `Network`, `Agent`, and `Features/Session`.
 - `SessionViewController` now only renders `SessionViewState` and forwards actions; `SessionViewModel` owns connect/start/reconnect/end, logs, errors, and local summary saving.
 - `SessionState` now has specific failure states instead of a generic `Failed`, making on-device debugging more direct.
@@ -169,7 +170,17 @@ Current verified items:
 - Feature scope is documented in `docs/feature-scope.md`.
 - Feature documentation policy is documented in `engineering-standards/FEATURE_DOC_POLICY.md`.
 - Backend agent code now follows the LiveKit Agents server/session structure with LiveKit Inference STT/LLM/TTS.
-- Tutor latency and voice clarity are tunable through `STT_MODEL`, `STT_EOT_TIMEOUT_MS`, `LLM_MODEL`, `LLM_MAX_TOKENS`, `PREEMPTIVE_TTS`, `TTS_MODEL`, `TTS_VOICE`, `TTS_SPEED`, `TTS_VOLUME`, and `TTS_MAX_BUFFER_DELAY_MS`; defaults prioritize short low-latency spoken replies, and agent logs include `[latency]` metrics for per-turn analysis.
+- Tutor latency and voice clarity are now controlled by `VOICE_PIPELINE_PROFILE=smooth|balanced|realtime`. The unsuccessful `legacy` experiment was removed after real-device comparison. `smooth` is now the default demo-safe profile and uses complete-sentence TTS buffering for maximum continuity; `balanced` remains available for later latency tuning with LLM preemptive generation, no interruption, SDK default streaming TTS, shorter replies, and `cartesia/sonic-3`; `realtime` uses LiveKit's default streaming TTS node with interruption enabled for the lowest latency. The agent logs `[profile] voice_pipeline` at startup and no longer changes profile dynamically during a session.
+- `End Session` now saves a local transcript-based summary immediately, marks AI summary as generating, and updates the local record if the optional P2 `/summary` endpoint completes.
+- Backend `POST /summary` accepts transcript text only, uses LiveKit Inference LLM when available, and returns a deterministic fallback summary if provider generation fails.
+- iOS now queues final transcript turns, calls optional P2 `POST /summary/incremental` during active sessions, and displays the running draft in a separate AI Summary Draft panel.
+- Final AI summary generation can include the latest running summary so end-of-session work is smaller than summarizing from scratch.
+- Final and incremental summary tasks are cancelled or ignored when a new connection starts, local history is cleared, or the target session/generation is stale.
+- Summary quality control is intentionally excluded from the current implementation scope.
+- `RUNBOOK.md` now exists as the operational troubleshooting source for backend startup, agent registration, duplicate tutor voices, iPhone LAN access, microphone/audio failures, choppy voice, transcript gaps, summary generation, and background-mode recovery.
+- iOS `AITutorTests` unit test target now exists and is included in the shared `AITutor` scheme.
+- iOS unit tests cover `SessionViewModel` connect/start/reconnect/end/transcript behavior with protocol mocks, `SessionStorageManager` latest-20 JSON persistence and clear-history, backend DTO decoding, summary display formatting, and specific failure-state mapping.
+- iOS unit tests pass with `xcodebuild test -project ios/AITutor.xcodeproj -scheme AITutor -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest'` on an iPhone 17 simulator.
 
 Pending verification:
 - Physical iPhone install/run from Xcode after the latest MVVM refactor.
@@ -177,6 +188,9 @@ Pending verification:
 - Agent joining the same room as the iOS client.
 - One full realtime voice loop with spoken tutor response.
 - Real-device transcript display for both learner speech and tutor speech.
+- Real-device background audio behavior while a voice session is active, including interruption, route-change, foreground recovery hint, and LiveKit diagnostic evidence.
+- Real-device local summary display and AI summary update after ending a session.
+- Real-device incremental AI Summary Draft panel updates during a longer active session.
 - Reconnect and local summary save behavior on device.
 
 中文：
@@ -187,10 +201,10 @@ Pending verification:
 - LiveKit Silero 和 turn-detector 模型文件可成功下载；
 - 本地 smoke test 中，后端 `/health` 返回 `{ "status": "ok" }`；
 - 使用 dummy 本地环境变量时，后端 `/session` 返回 `livekit_url`、`token`、`room_name`、`participant_identity` 和 session 元数据；
-- 后端诊断脚本已创建在 `backend/tests/diagnose_backend.py`，可输出结构化日志、脱敏 token/secret，并已通过 `--skip-api` 和 dummy env 的完整 localhost API 检查；
-- 后端本地启动脚本已创建，覆盖 setup、API server、agent dev mode 和一键联合启动；根目录 `start_all.sh` 是评审入口，会先清理再将 API/agent 日志写入 `logs/`，等待 API health 和 agent `registered worker`，脚本会同步 Finder 可见的 `env` 到运行时 `.env`；
+- 后端诊断脚本已创建在 `backend/tests/diagnose_backend.py`，可输出结构化日志、脱敏 token/secret，在 API 运行时会检查 `/summary` 和 `/summary/incremental` 响应结构，并已通过 `--skip-api`；
+- 后端本地启动脚本已创建，覆盖 setup、API server、agent dev mode 和一键联合启动；根目录 `start_all.sh` 是评审入口，会在启动前停止旧的本地 `uvicorn main:app` 和 `agent.py dev` 进程，先清理再将 API/agent 日志写入 `logs/`，等待 API health 和 agent `registered worker`，脚本会同步 Finder 可见的 `env` 到运行时 `.env`；
 - 根目录 `clear_logs.sh` 会安全清空 runtime logs；iOS Xcode target 在 Debug 构建/运行前会调用它，所以每次 Cmd+R 都从新的 API/agent 日志开始；
-- 根目录 `check_audio_health.sh` 会汇总 agent 音频相关日志证据，例如 TTS 生成过慢、麦克风轨道是否出现、输入语音 warning 是否重复；
+- 根目录 `check_audio_health.sh` 会汇总 agent 音频相关日志证据，例如当前语音 profile、TTS 生成过慢、旧版 balanced buffer 证据、smooth buffer 证据、麦克风轨道是否出现，以及输入语音 warning 是否重复；
 - 根目录 `check_backend.sh` 会运行后端诊断，并检查 `logs/agent.log` 中是否出现 `registered worker`；
 - iOS 工程已能解析 LiveKit Swift SDK、SnapKit、SwiftProtobuf、LiveKitWebRTC 和 LiveKitUniFFI 的 Swift Package 依赖；
 - generic iOS Debug 构建已通过：`xcodebuild -project ios/AITutor.xcodeproj -scheme AITutor -configuration Debug -destination 'generic/platform=iOS' build`；
@@ -198,6 +212,7 @@ Pending verification:
 - tutor 不再在进入房间时自动说话；iOS 会在 `Start Session` 成功发布麦克风后才发送 start-conversation 信号；
 - iOS 现在会通过 `RoomDelegate` 监听 LiveKit transcription segments，按 segment ID 合并 partial/final 更新，并在 Session 页面轻量展示 `You` / `Tutor` 转写行；
 - 手动输入 fallback 文本也会立即显示为 `You` 转写行，因此即使语音转写尚未到达，也能验证转写 UI 路径；
+- `Info.plist` 已声明 `UIBackgroundModes=audio`，`SceneDelegate` 会输出 `[test]` 前后台生命周期日志，`AudioSessionManager` 会输出音频中断和路由变化诊断，`LiveKitAgentClient` 会提供脱敏连接/麦克风诊断，用于验证活跃语音会话的后台和前台恢复表现；
 - iOS 已重构为 MVVM 和 `App`、`Core`、`Network`、`Agent`、`Features/Session` 分层；
 - `SessionViewController` 现在只渲染 `SessionViewState` 并转发动作；`SessionViewModel` 负责连接、开始、重连、结束、日志、错误和本地总结保存；
 - `SessionState` 已从单一 `Failed` 扩展为具体失败状态，让真机调试更直接；
@@ -211,7 +226,17 @@ Pending verification:
 - 功能范围已记录在 `docs/feature-scope.md`；
 - 功能文档规范已记录在 `engineering-standards/FEATURE_DOC_POLICY.md`。
 - 后端 agent 代码已按 LiveKit Agents server/session 结构接入 LiveKit Inference STT/LLM/TTS；
-- tutor 延迟和语音清晰度可通过 `STT_MODEL`、`STT_EOT_TIMEOUT_MS`、`LLM_MODEL`、`LLM_MAX_TOKENS`、`PREEMPTIVE_TTS`、`TTS_MODEL`、`TTS_VOICE`、`TTS_SPEED`、`TTS_VOLUME`、`TTS_MAX_BUFFER_DELAY_MS` 调整；默认优先使用短句、低延迟的口语反馈，agent 日志会输出 `[latency]` 指标用于逐轮分析。
+- tutor 延迟和语音清晰度现在通过 `VOICE_PIPELINE_PROFILE=smooth|balanced|realtime` 控制。真机对比后，效果不符合预期的 `legacy` 实验已移除。`smooth` 现在是默认演示保底模式，使用完整短句 TTS 缓冲以优先保证连续性；`balanced` 保留给后续低延迟调优，会开启 LLM 抢跑、关闭打断、使用 SDK 默认流式 TTS、缩短回复，并使用 `cartesia/sonic-3`；`realtime` 使用 LiveKit 默认流式 TTS 节点并允许打断，以追求最低延迟。agent 启动时会输出 `[profile] voice_pipeline`，会话中不再动态切换 profile。
+- `End Session` 现在会立即保存基于 transcript 的本地摘要，将 AI 摘要标记为生成中，并在可选 P2 `/summary` 完成后更新本地记录；
+- 后端 `POST /summary` 只接收 transcript 文本，优先使用 LiveKit Inference LLM，provider 生成失败时返回确定性的 fallback 摘要。
+- iOS 现在会缓存 final transcript turns，并在活跃会话中调用可选 P2 `POST /summary/incremental`，在独立 AI Summary Draft 面板持续展示 running draft；
+- 最终 AI 摘要生成可以带上最新 running summary，所以结束时不必完全从零总结。
+- 当开始新连接、清空本地历史，或目标 session/generation 已过期时，最终和增量摘要任务会被取消或忽略。
+- 摘要质量控制已按当前范围刻意排除。
+- `RUNBOOK.md` 已作为运行排障入口，覆盖后端启动、agent 注册、重复 tutor 声音、iPhone 局域网访问、麦克风/音频失败、语音卡顿、转写缺失、摘要生成和后台恢复。
+- iOS `AITutorTests` 单元测试 target 已创建，并已加入共享 `AITutor` scheme。
+- iOS 单元测试覆盖 `SessionViewModel` 的 connect/start/reconnect/end/transcript 行为（使用协议 mock）、`SessionStorageManager` 最近 20 条 JSON 持久化和清空历史、后端 DTO 解码、summary 展示格式和具体失败状态映射。
+- iOS 单元测试已通过：`xcodebuild test -project ios/AITutor.xcodeproj -scheme AITutor -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest'`，测试设备为 iPhone 17 simulator。
 
 待验证：
 - 最新 MVVM 重构后通过 Xcode 真机安装和运行；
@@ -219,6 +244,9 @@ Pending verification:
 - agent 加入与 iOS 客户端相同的房间；
 - 一次带 tutor 语音回应的完整实时语音闭环；
 - 真机上用户语音和 tutor 语音的转写显示；
+- 真机上活跃语音会话的后台音频行为，包括音频中断、路由变化、前台恢复提示和 LiveKit 诊断证据；
+- 真机结束会话后的本地摘要展示和 AI 摘要更新；
+- 真机长会话中的 AI Summary Draft 面板增量更新；
 - 真机上的重连和本地总结保存行为。
 
 ## 9. Debugging Notes
@@ -227,6 +255,8 @@ Known debugging approach:
 - If token creation fails, inspect `.env` values, backend logs, and `/session` response shape.
 - If the iOS app connects but no voice is heard, verify microphone permission, `AVAudioSession`, local track publishing, and agent room membership.
 - If the tutor speaks but the transcript panel stays empty, check for `[test] Transcript ...` lines in Xcode; if no delegate events arrive, fall back to LiveKit `lk.transcription` text-stream handling.
+- If background audio fails, verify `UIBackgroundModes=audio`, active microphone publishing before backgrounding, `[test] Scene entered background`, and whether iOS interrupted the audio session.
+- If AI summary does not update, verify `/summary` API logs, transcript availability, and `SUMMARY_LLM_*` environment settings.
 - If Start Session fails with a generic audio engine error, use the in-app diagnostics to separate microphone permission, `AVAudioSession` route/category/mode, and LiveKit microphone publishing errors.
 - Manual `AVAudioSession.setActive(true)` is intentionally avoided before LiveKit publish to reduce WebRTC audio-engine conflicts; LiveKit can activate the session while publishing.
 - If the iOS app shows black bars on a physical device, verify `UILaunchStoryboardName=LaunchScreen`, `LaunchScreen.storyboard` resource membership, and reinstall the app after cleaning the old build.
@@ -241,6 +271,8 @@ Known debugging approach:
 - 如果 token 创建失败，检查 `.env`、后端日志和 `/session` 响应结构；
 - 如果 iOS 已连接但没有语音，检查麦克风权限、`AVAudioSession`、本地 track 发布和 agent 房间成员关系；
 - 如果 tutor 已经说话但转写面板为空，先在 Xcode 中检查 `[test] Transcript ...` 日志；如果没有 delegate 事件，再接入 LiveKit `lk.transcription` text-stream fallback；
+- 如果后台音频失败，检查 `UIBackgroundModes=audio`、进入后台前麦克风是否已发布、是否出现 `[test] Scene entered background`，以及 iOS 是否打断了音频会话；
+- 如果 AI 摘要没有更新，检查 `/summary` API 日志、transcript 是否可用，以及 `SUMMARY_LLM_*` 环境变量；
 - 如果 Start Session 只显示笼统的 audio engine error，使用 App 内诊断日志区分麦克风权限、`AVAudioSession` 路由/category/mode 和 LiveKit 麦克风发布问题；
 - 在 LiveKit 发布前刻意避免手动调用 `AVAudioSession.setActive(true)`，以减少 WebRTC audio engine 冲突；LiveKit 可在发布麦克风时激活音频会话；
 - 如果真机显示上下黑边，检查 `UILaunchStoryboardName=LaunchScreen`、`LaunchScreen.storyboard` 是否在资源中，并清理旧构建后重装 App；

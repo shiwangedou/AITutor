@@ -126,6 +126,9 @@ These items are useful after P0 and P1 are stable.
 
 5. Background and foreground recovery
 - Keep state coherent when the app moves between background and foreground.
+- Current support enables iOS `audio` background mode for active voice sessions, logs foreground/background, interruption, route-change, and LiveKit connection diagnostics, and enables `Reconnect` after foreground return; full recovery behavior still needs physical-device validation.
+
+中文：当前已启用 iOS `audio` 后台模式，用于活跃语音会话，并记录前后台、音频中断、路由变化和 LiveKit 连接诊断；回前台后会启用 `Reconnect`；完整前后台恢复行为仍需要真机验证。
 
 6. Backend tests
 - Cover `/health`, `/session`, and missing config behavior.

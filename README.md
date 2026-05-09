@@ -117,6 +117,8 @@ Backend endpoints:
 - `GET /health`
 - `GET /config`
 - `POST /session`
+- `POST /summary/incremental`
+- `POST /summary`
 
 Run backend diagnostics:
 
@@ -244,27 +246,85 @@ IOS_BACKEND_HOST=<mac-lan-ip> IOS_BACKEND_PORT=8000 ios/scripts/configure_backen
 - MVP 暂不引入：Alamofire、RxSwift/Combine 封装、额外持久化框架、统计 SDK、自定义音频库；
 - 原因：`URLSession`、UIKit、AVFAudio、LiveKit 和 SnapKit 已覆盖 P0 语音闭环，额外库会增加复杂度。
 
+## iOS Tests
 
-## Voice Clarity Tuning
+The project includes an `AITutorTests` unit test target for the MVVM/session logic.
 
-If the tutor feels slow or the voice sounds unclear, tune these values in root `env`, then restart `./start_all.sh`:
+Run from the repository root:
 
 ```bash
-STT_MODEL=deepgram/flux-general
-STT_EOT_TIMEOUT_MS=700
-LLM_MODEL=openai/gpt-4.1-nano
-LLM_MAX_TOKENS=60
-PREEMPTIVE_TTS=true
-TTS_MODEL=cartesia/sonic-turbo
-TTS_VOICE=f786b574-daa5-4673-aa0c-cbe3e8534c02
-TTS_SPEED=normal
-TTS_VOLUME=1.0
-TTS_MAX_BUFFER_DELAY_MS=300
+xcodebuild test -project ios/AITutor.xcodeproj -scheme AITutor -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest'
 ```
 
-Recommended first adjustment for slow feedback: keep `STT_MODEL=deepgram/flux-general`, `LLM_MODEL=openai/gpt-4.1-nano`, `LLM_MAX_TOKENS=60`, `PREEMPTIVE_TTS=true`, and `TTS_MAX_BUFFER_DELAY_MS=300`. If the voice is smooth but still unclear, try `TTS_SPEED=slow`; if slow speech becomes choppy again, return to `normal`.
+If the requested simulator is not available, choose one listed by:
 
-中文：如果 tutor 反馈慢或声音卡顿，优先在根目录 `env` 保持 `STT_MODEL=deepgram/flux-general`、`LLM_MODEL=openai/gpt-4.1-nano`、`LLM_MAX_TOKENS=60`、`PREEMPTIVE_TTS=true`、`TTS_MAX_BUFFER_DELAY_MS=300`，然后重启 `./start_all.sh`。如果声音已经流畅但仍不清楚，可以再尝试 `TTS_SPEED=slow`；如果慢速再次卡顿，就改回 `normal`。
+```bash
+xcodebuild -showdestinations -project ios/AITutor.xcodeproj -scheme AITutor
+```
+
+Current coverage focuses on:
+- `SessionViewModel` connect/start/reconnect/end/transcript state transitions with protocol mocks.
+- `SessionStorageManager` JSON/Codable latest-20 behavior and clear-history.
+- Backend DTO decoding and summary display formatting.
+- Specific user-facing failure state mapping.
+
+中文：项目包含 `AITutorTests` 单元测试 target，用于保护 MVVM/session 逻辑。
+
+在仓库根目录运行：
+
+```bash
+xcodebuild test -project ios/AITutor.xcodeproj -scheme AITutor -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest'
+```
+
+如果本机没有该模拟器，可以用下面命令查看可用 destination：
+
+```bash
+xcodebuild -showdestinations -project ios/AITutor.xcodeproj -scheme AITutor
+```
+
+当前测试覆盖：
+- `SessionViewModel` 的 connect/start/reconnect/end/transcript 状态流，并使用协议 mock 隔离 LiveKit、音频和后端。
+- `SessionStorageManager` 的 JSON/Codable 最近 20 条保存和清空历史。
+- 后端 DTO 解码和 summary 展示格式。
+- 具体用户可读失败状态映射。
+
+## Runbook
+
+Operational troubleshooting lives in `RUNBOOK.md`. Use it when backend startup, agent registration, iPhone LAN access, microphone publishing, choppy audio, transcript, summary, or background-mode behavior needs debugging.
+
+中文：运行和排障手册放在 `RUNBOOK.md`。当后端启动、agent 注册、iPhone 局域网访问、麦克风发布、语音卡顿、转写、摘要或后台模式需要排查时，优先查看它。
+
+
+## Voice Pipeline Profiles
+
+The backend uses one voice profile switch in root `env`:
+
+```bash
+VOICE_PIPELINE_PROFILE=smooth
+```
+
+Available profiles:
+- `smooth` is the default demo-safe profile. It disables interruption and preemptive generation, keeps tutor replies very short, and buffers each short TTS sentence before playback. The tutor may wait longer before speaking, but each sentence should sound most continuous.
+- `balanced` uses LiveKit Inference STT/LLM/TTS, enables LLM preemptive generation, disables interruption for a calmer tutor, uses LiveKit's default streaming TTS path, and keeps replies extremely short. It is available for later tuning when lower latency matters more than maximum smoothness.
+- `realtime` uses LiveKit's default streaming TTS node with preemptive LLM generation and interruption enabled. It is most responsive and closest to a realtime voice product, but slow TTS flushes can be audible as chunking in some network/model conditions.
+
+To test another mode temporarily:
+
+```bash
+VOICE_PIPELINE_PROFILE=balanced ./start_all.sh
+VOICE_PIPELINE_PROFILE=smooth ./start_all.sh
+VOICE_PIPELINE_PROFILE=realtime ./start_all.sh
+```
+
+The agent logs the active profile with `[profile] voice_pipeline`, and `./check_audio_health.sh` explains audio warnings according to that profile. No raw audio, token, API key, or API secret is logged.
+
+中文：后端现在只通过根目录 `env` 中的 `VOICE_PIPELINE_PROFILE=smooth|balanced|realtime` 切换语音管线。
+
+- `smooth` 是默认演示保底模式：关闭打断和抢跑，tutor 回复更短，并在服务端先合成完整短句再播放。它可能更晚开口，但一句话内部通常最连续。
+- `balanced` 仍使用 LiveKit Inference STT/LLM/TTS，开启 LLM 抢跑，关闭打断，使用 LiveKit 默认流式 TTS 路径，并把回复控制得很短。后续如果更重视低延迟，可以继续调这个模式。
+- `realtime` 使用 LiveKit 默认流式 TTS 节点，开启 LLM 抢跑和打断，最接近实时语音产品；但在某些网络或模型条件下，slow TTS flush 可能表现为句中分块或轻微卡顿。
+
+agent 会用 `[profile] voice_pipeline` 输出当前 profile，`./check_audio_health.sh` 会按 profile 解读音频 warning。日志不会输出原始音频、token、API key 或 API secret。
 
 ## 7. Key Design Decisions and Tradeoffs
 
@@ -307,28 +367,46 @@ Feature priorities and non-goals are documented in `docs/feature-scope.md`.
 ## 10. Validation Checklist
 
 - `./start_all.sh` shows `Backend API ready`, `Agent registered worker`, and `All backend services ready`.
+- `./start_all.sh` performs a clean restart by stopping stale local `uvicorn main:app` and `agent.py dev` processes before launching, preventing port conflicts and duplicate tutor voices.
 - `./clear_logs.sh` clears `logs/api.log` and `logs/agent.log` without deleting the files.
 - Xcode Debug builds run the `Clear Runtime Logs` build phase, so pressing Cmd+R starts with fresh runtime logs.
-- `./check_audio_health.sh` summarizes agent audio warnings such as slow TTS generation and missing microphone-track evidence.
+- `./check_audio_health.sh` summarizes the active voice profile, slow TTS generation, stale balanced-buffer evidence, smooth-buffer evidence, and missing microphone-track evidence.
 - `./check_backend.sh` passes when backend services are running.
 - Xcode build succeeds for the `AITutor` scheme.
+- iOS unit tests pass for the `AITutor` scheme.
+- `RUNBOOK.md` exists and covers common startup, network, agent, audio, transcript, summary, and background-mode issues.
 - On iPhone, `Connect` creates a room and connects to LiveKit.
 - `Connect` stays quiet; `Start Session` requests microphone permission, publishes audio, sends the start signal, and then the tutor speaks.
 - `Start Session` shows `[test]` audio/LiveKit logs.
+- Active voice sessions declare iOS background audio support; validate by starting a session, locking the phone or switching apps, speaking/hearing tutor audio, inspecting foreground/background plus interruption/route/LiveKit `[test]` logs, returning foreground, and ending the session.
+- Background support is intentionally scoped to active audio sessions. If iOS suspends or kills the app, reopen it and use `Reconnect`; this demo does not claim unlimited background execution.
 - `Reconnect` is visible after failure and retries the current session when available.
-- `End Session` disconnects, deactivates audio, and saves local metadata/summary.
+- During active sessions, the AI Summary Draft panel can update after several final transcript turns.
+- `End Session` disconnects, deactivates audio, saves a local transcript-based summary immediately, and then updates the record if final AI summary generation completes.
+- Summary generation is guarded so stale async results are ignored after a new connection starts, history is cleared, or the target session is no longer current.
+- Backend diagnostics smoke-check `/summary` and `/summary/incremental` response shape when backend services are running.
+- Summary quality control is not part of the current implementation scope.
 - No raw audio, LiveKit token, API key, or API secret is stored or logged.
 
 中文：
 - `./start_all.sh` 应输出 `Backend API ready`、`Agent registered worker` 和 `All backend services ready`。
+- `./start_all.sh` 会在启动前清理旧的本地 `uvicorn main:app` 和 `agent.py dev` 进程，避免端口冲突和旧 LiveKit agent 残留导致两个 tutor 声音。
 - `./clear_logs.sh` 会清空 `logs/api.log` 和 `logs/agent.log` 的内容，但不会删除文件本身。
 - Xcode Debug 构建会运行 `Clear Runtime Logs` build phase，所以按 Cmd+R 时会先清理本地 runtime logs。
-- `./check_audio_health.sh` 会汇总 agent 音频相关 warning，例如 TTS 生成过慢或缺少麦克风轨道证据。
+- `./check_audio_health.sh` 会汇总当前语音 profile、TTS 生成过慢、旧版 balanced buffer 证据、smooth buffer 证据，以及是否缺少麦克风轨道证据。
 - 后端运行时，`./check_backend.sh` 应通过。
 - Xcode `AITutor` scheme 构建应成功。
+- iOS 单元测试应通过 `AITutor` scheme。
+- `RUNBOOK.md` 已存在，并覆盖常见启动、网络、agent、音频、转写、摘要和后台模式问题。
 - 真机点击 `Connect` 能创建房间并连接 LiveKit。
 - `Connect` 阶段保持安静；`Start Session` 会请求麦克风权限、发布音频、发送开始信号，然后 tutor 才开始说话。
 - `Start Session` 会输出 `[test]` audio/LiveKit 日志。
+- 活跃语音会话已声明 iOS 后台音频支持；验证方式是开始会话后锁屏或切到其他 App，确认还能说话/听到 tutor，检查前后台、音频中断、路由变化和 LiveKit `[test]` 日志，回到前台后再结束会话。
+- 后台支持刻意限定为活跃音频会话。如果 iOS 暂停或杀掉 App，需要重新打开并使用 `Reconnect`；这个 demo 不声明无限后台执行能力。
 - 失败后显示 `Reconnect`，并优先重试当前会话。
-- `End Session` 会断开连接、释放音频并保存本地元数据/总结。
+- 活跃会话中，AI Summary Draft 面板会在累计几轮 final transcript 后更新。
+- `End Session` 会断开连接、释放音频、立即保存本地 transcript 摘要，并在最终 AI 摘要完成后更新本地记录。
+- 摘要生成有保护逻辑：开始新连接、清空历史，或目标 session 不再是当前可写对象后，旧的异步摘要结果会被忽略。
+- 后端服务运行时，诊断脚本会 smoke-check `/summary` 和 `/summary/incremental` 响应结构。
+- 摘要质量控制不属于当前实现范围。
 - 不保存或输出原始音频、LiveKit token、API key 或 API secret。
