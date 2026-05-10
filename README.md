@@ -23,7 +23,9 @@ A minimal real-time voice AI tutor with a simple Python backend and a native iOS
 
 ## Reviewer Quick Start
 
-1. Copy `.env.example` to `.env` and fill LiveKit values.
+Fast path: copy `env.example` to `env`, fill LiveKit keys, run `./start_all.sh`, then run the iOS app from Xcode.
+
+1. Copy `env.example` to `env` and fill LiveKit values.
 2. From project root, run `./start_all.sh`.
 3. Wait for `Backend API ready`, `Agent registered worker`, and `All backend services ready`.
 4. Run the iOS app on a physical iPhone from Xcode.
@@ -33,7 +35,9 @@ A minimal real-time voice AI tutor with a simple Python backend and a native iOS
 8. End the session, then review the saved summary in History.
 
 中文：
-1. 复制 `.env.example` 为 `.env` 并填写 LiveKit 配置；
+一句话：复制 `env.example` 为 `env`，填写 LiveKit keys，运行 `./start_all.sh`，然后用 Xcode 运行 iOS App。
+
+1. 复制 `env.example` 为 `env` 并填写 LiveKit 配置；
 2. 在项目根目录运行 `./start_all.sh`；
 3. 等待 `Backend API ready`、`Agent registered worker`、`All backend services ready`；
 4. 用 Xcode 在真机运行 iOS App；
@@ -96,18 +100,18 @@ Separation of concerns:
 
 ## 4. Environment Setup
 
-1. Use root `.env.example` as the template.
-2. Copy it to `.env`.
-3. Fill `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` in `.env`.
-4. Backend scripts prefer an existing `.env`; if `.env` is missing, they can create one from the safe placeholder `env` file.
-5. `.env` is ignored by git; `env`, `env.example`, and `.env.example` are committed only as placeholder templates.
+1. Use root `env.example` as the visible template.
+2. Copy it to `env`.
+3. Fill `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` in `env`.
+4. Backend scripts automatically copy `env` to the runtime `.env` before setup/start.
+5. `.env` is ignored by git; `env.example` and `.env.example` are committed as shareable templates. Keep committed `env` placeholder-safe and never commit real secrets.
 
 中文：
-1. 使用根目录 `.env.example` 作为配置模板。
-2. 复制为 `.env`。
-3. 在 `.env` 中填写 `LIVEKIT_URL`、`LIVEKIT_API_KEY`、`LIVEKIT_API_SECRET`。
-4. 后端脚本会优先使用已有 `.env`；如果 `.env` 不存在，才会从安全 placeholder `env` 文件创建。
-5. `.env` 会被 git 忽略；`env`、`env.example` 和 `.env.example` 只作为可提交的 placeholder 模板。
+1. 使用根目录 `env.example` 作为可见配置模板。
+2. 复制为 `env`。
+3. 在 `env` 中填写 `LIVEKIT_URL`、`LIVEKIT_API_KEY`、`LIVEKIT_API_SECRET`。
+4. 后端脚本会在 setup/start 前自动复制 `env` 到运行时 `.env`。
+5. `.env` 会被 git 忽略；`env.example` 和 `.env.example` 作为可提交的配置模板。提交前保持 `env` 为 placeholder，不要提交真实密钥。
 
 ## 5. Run Backend
 
@@ -145,7 +149,7 @@ If `Agent registered worker` appears, the LiveKit agent has connected to LiveKit
 Check backend health from project root:
 
 ```bash
-./check_backend.sh
+./scripts/check_backend.sh
 ```
 
 Backend-only scripts are also available:
@@ -333,9 +337,9 @@ xcodebuild -showdestinations -project ios/AITutor.xcodeproj -scheme AITutor
 
 ## Runbook
 
-Operational troubleshooting lives in `RUNBOOK.md`. Use it when backend startup, agent registration, iPhone LAN access, microphone publishing, choppy audio, transcript, summary, or background-mode behavior needs debugging.
+Operational troubleshooting lives in `docs/RUNBOOK.md`. Use it when backend startup, agent registration, iPhone LAN access, microphone publishing, choppy audio, transcript, summary, or background-mode behavior needs debugging.
 
-中文：运行和排障手册放在 `RUNBOOK.md`。当后端启动、agent 注册、iPhone 局域网访问、麦克风发布、语音卡顿、转写、摘要或后台模式需要排查时，优先查看它。
+中文：运行和排障手册放在 `docs/RUNBOOK.md`。当后端启动、agent 注册、iPhone 局域网访问、麦克风发布、语音卡顿、转写、摘要或后台模式需要排查时，优先查看它。
 
 
 ## Voice Pipeline Profiles
@@ -359,7 +363,7 @@ VOICE_PIPELINE_PROFILE=smooth ./start_all.sh
 VOICE_PIPELINE_PROFILE=realtime ./start_all.sh
 ```
 
-The agent logs the active profile with `[profile] voice_pipeline`, and `./check_audio_health.sh` explains audio warnings according to that profile. No raw audio, token, API key, or API secret is logged.
+The agent logs the active profile with `[profile] voice_pipeline`, and `./scripts/check_audio_health.sh` explains audio warnings according to that profile. No raw audio, token, API key, or API secret is logged.
 
 中文：后端现在只通过根目录 `env` 中的 `VOICE_PIPELINE_PROFILE=smooth|balanced|realtime` 切换语音管线。
 
@@ -367,7 +371,7 @@ The agent logs the active profile with `[profile] voice_pipeline`, and `./check_
 - `balanced` 仍使用 LiveKit Inference STT/LLM/TTS，开启 LLM 抢跑，关闭打断，使用 LiveKit 默认流式 TTS 路径，并把回复控制得很短。后续如果更重视低延迟，可以继续调这个模式。
 - `realtime` 使用 LiveKit 默认流式 TTS 节点，开启 LLM 抢跑和打断，最接近实时语音产品；但在某些网络或模型条件下，slow TTS flush 可能表现为句中分块或轻微卡顿。
 
-agent 会用 `[profile] voice_pipeline` 输出当前 profile，`./check_audio_health.sh` 会按 profile 解读音频 warning。日志不会输出原始音频、token、API key 或 API secret。
+agent 会用 `[profile] voice_pipeline` 输出当前 profile，`./scripts/check_audio_health.sh` 会按 profile 解读音频 warning。日志不会输出原始音频、token、API key 或 API secret。
 
 ## Demo Script
 
@@ -401,7 +405,7 @@ Use this script for a reviewer-facing walkthrough:
 ## Expected Success Signals
 
 - Terminal shows `Backend API ready`, `Agent registered worker`, and `All backend services ready`.
-- `./check_backend.sh` passes while services are running.
+- `./scripts/check_backend.sh` passes while services are running.
 - Xcode console `[test]` logs show backend session creation, LiveKit connect, mic publish/mute, transcript, storage, and summary events.
 - App Home shows the selected learning profile and latest summary card.
 - Fresh AI Chat connects and gets one short tutor opener; History Continue connects quietly and waits for the learner.
@@ -415,7 +419,7 @@ Use this script for a reviewer-facing walkthrough:
 中文：
 预期成功信号：
 - 终端出现 `Backend API ready`、`Agent registered worker`、`All backend services ready`；
-- 服务运行时 `./check_backend.sh` 通过；
+- 服务运行时 `./scripts/check_backend.sh` 通过；
 - Xcode console 中 `[test]` 日志能看到后端 session、LiveKit 连接、麦克风发布/静音、转写、存储和摘要事件；
 - 首页展示当前学习配置和最近摘要卡片；
 - 全新 AI Chat 连接后会有一句简短 tutor 开场；History Continue 会安静等待学习者继续；
@@ -462,8 +466,20 @@ Use this script for a reviewer-facing walkthrough:
   - Why: Home, Chat, History, Diagnostics, and Settings make the demo feel complete without building a full learning platform.
 - Decision: Learning profile affects backend prompt.
   - Why: mode/style/difficulty/custom goal must change tutor behavior, not just labels.
+- Decision: Separate UI, session orchestration, audio I/O, networking/streaming, and persistence.
+  - Why: this keeps rendering, LiveKit room control, microphone behavior, backend calls, and local storage independently testable and replaceable.
+- Tradeoff: default `VOICE_PIPELINE_PROFILE=smooth`.
+  - Why: it favors clear full-sentence playback over the lowest possible latency because demo reliability matters more than shaving off a second of response time.
 - Decision: Keep Words Practice focused instead of building a full vocabulary system.
   - Why: it shows product direction and reuse of the LiveKit chat flow without diluting the core voice tutor.
+- Decision: Store text transcripts and summaries locally, but never raw audio.
+  - Why: learners need review value, while privacy and scope should stay tight.
+- Decision: Save local fallback summary first, then update with AI summary asynchronously.
+  - Why: ending a session remains reliable even if generation is slow or temporarily unavailable.
+- Decision: Reconnect current room first, then fall back to a fresh session.
+  - Why: current-room reconnect preserves continuity when possible; fallback keeps the demo recoverable without losing local messages.
+- Decision: Scope background audio to the active Chat session.
+  - Why: it supports hands-free practice without claiming unlimited background execution.
 - Decision: Use SnapKit for UIKit layout.
   - Why: it keeps constraints readable while staying in UIKit.
 - Tradeoff: no extra networking or reactive framework.
@@ -474,7 +490,13 @@ Use this script for a reviewer-facing walkthrough:
 - 第一版 agent 使用 LiveKit Inference，避免额外引入模型 API key。
 - UIKit 多页面但保持轻量，让 Home、Chat、History、Diagnostics、Settings 形成完整 demo，而不是完整学习平台。
 - 学习配置会影响后端 prompt，保证模式、风格、难度和目标不是纯 UI 标签。
+- UI、会话编排、音频 I/O、网络/流媒体、持久化明确分层，让渲染、LiveKit 房间控制、麦克风行为、后端调用和本地存储都能独立测试和替换。
+- 默认 `VOICE_PIPELINE_PROFILE=smooth`，牺牲一点最低延迟，换取更清楚完整的整句语音播放，因为 demo 稳定性比少一秒响应更重要。
 - Words Practice 只做聚焦目标词练习，不做完整单词系统；这样可以展示产品方向，同时复用核心 LiveKit 聊天链路。
+- 本地保存文本 transcript 和 summary，但不保存 raw audio；这样既有复盘价值，也控制隐私和范围风险。
+- 结束会话时先保存本地 fallback summary，再异步更新 AI summary；即使生成慢或失败，结束流程仍可靠。
+- Reconnect 先尝试当前 room，失败后再创建新 session；这样能尽量保留连续性，同时保证 demo 可恢复。
+- 后台音频只限定在活跃 Chat 会话内，不声明无限后台执行；这样更安全，也更容易解释。
 - 使用 SnapKit 管理 UIKit 约束，让布局代码更清晰。
 - 暂不引入额外网络库或响应式框架，因为 `URLSession` 和 async/await 已满足当前单接口需求。
 
@@ -504,13 +526,13 @@ Final physical-device validation is treated as passed for the submission scope. 
 
 - `./start_all.sh` shows `Backend API ready`, `Agent registered worker`, and `All backend services ready`.
 - `./start_all.sh` performs a clean restart by stopping stale local `uvicorn main:app` and `agent.py dev` processes before launching, preventing port conflicts and duplicate tutor voices.
-- `./clear_logs.sh` clears `logs/api.log` and `logs/agent.log` without deleting the files.
+- `./scripts/clear_logs.sh` clears `logs/api.log` and `logs/agent.log` without deleting the files.
 - Xcode Debug builds run the `Clear Runtime Logs` build phase, so pressing Cmd+R starts with fresh runtime logs.
-- `./check_audio_health.sh` summarizes the active voice profile, slow TTS generation, stale balanced-buffer evidence, smooth-buffer evidence, and missing microphone-track evidence.
-- `./check_backend.sh` passes when backend services are running.
+- `./scripts/check_audio_health.sh` summarizes the active voice profile, slow TTS generation, stale balanced-buffer evidence, smooth-buffer evidence, and missing microphone-track evidence.
+- `./scripts/check_backend.sh` passes when backend services are running.
 - Xcode build succeeds for the `AITutor` scheme.
 - iOS unit tests pass for the `AITutor` scheme.
-- `RUNBOOK.md` exists and covers common startup, network, agent, audio, transcript, summary, and background-mode issues.
+- `docs/RUNBOOK.md` exists and covers common startup, network, agent, audio, transcript, summary, and background-mode issues.
 - On iPhone, opening `AI Chat` creates a room and connects to LiveKit.
 - Fresh auto-connect opens with one short tutor warm-up; resume-context chats stay quiet. Tapping the mic requests microphone permission and publishes audio, the waveform replaces the text field while recording, and send finishes voice input before the tutor responds.
 - Voice/text input shows `[test]` audio/LiveKit/session logs.
@@ -532,13 +554,13 @@ Final physical-device validation is treated as passed for the submission scope. 
 中文：
 - `./start_all.sh` 应输出 `Backend API ready`、`Agent registered worker` 和 `All backend services ready`。
 - `./start_all.sh` 会在启动前清理旧的本地 `uvicorn main:app` 和 `agent.py dev` 进程，避免端口冲突和旧 LiveKit agent 残留导致两个 tutor 声音。
-- `./clear_logs.sh` 会清空 `logs/api.log` 和 `logs/agent.log` 的内容，但不会删除文件本身。
+- `./scripts/clear_logs.sh` 会清空 `logs/api.log` 和 `logs/agent.log` 的内容，但不会删除文件本身。
 - Xcode Debug 构建会运行 `Clear Runtime Logs` build phase，所以按 Cmd+R 时会先清理本地 runtime logs。
-- `./check_audio_health.sh` 会汇总当前语音 profile、TTS 生成过慢、旧版 balanced buffer 证据、smooth buffer 证据，以及是否缺少麦克风轨道证据。
-- 后端运行时，`./check_backend.sh` 应通过。
+- `./scripts/check_audio_health.sh` 会汇总当前语音 profile、TTS 生成过慢、旧版 balanced buffer 证据、smooth buffer 证据，以及是否缺少麦克风轨道证据。
+- 后端运行时，`./scripts/check_backend.sh` 应通过。
 - Xcode `AITutor` scheme 构建应成功。
 - iOS 单元测试应通过 `AITutor` scheme。
-- `RUNBOOK.md` 已存在，并覆盖常见启动、网络、agent、音频、转写、摘要和后台模式问题。
+- `docs/RUNBOOK.md` 已存在，并覆盖常见启动、网络、agent、音频、转写、摘要和后台模式问题。
 - 真机进入 `AI Chat` 会创建房间并连接 LiveKit。
 - 全新空聊天自动连接后会有一句简短 warm-up；带上下文继续学习时会保持安静。点击麦克风会请求麦克风权限并发布音频，录音时输入框位置显示音波，点击发送结束语音输入后 tutor 再回应。
 - 语音/文字输入会输出 `[test]` audio/LiveKit/session 日志。

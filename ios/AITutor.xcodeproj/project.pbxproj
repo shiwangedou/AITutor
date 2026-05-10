@@ -380,7 +380,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [ \"${CONFIGURATION}\" = \"Debug\" ]; then\n  \"${SRCROOT}/../clear_logs.sh\"\nfi\n";
+			shellScript = "if [ \"${CONFIGURATION}\" = \"Debug\" ]; then\n  \"${SRCROOT}/../scripts/clear_logs.sh\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

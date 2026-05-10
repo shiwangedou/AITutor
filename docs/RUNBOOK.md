@@ -10,30 +10,30 @@ This runbook is the first place to check when the demo does not start, the iPhon
 
 ## Golden Path
 
-1. Copy root `.env.example` to `.env` and fill LiveKit values.
+1. Copy root `env.example` to `env` and fill LiveKit values.
 2. Run `./start_all.sh` from the repository root.
 3. Wait for `Backend API ready`, `Agent registered worker`, and `All backend services ready`.
-4. Run `./check_backend.sh` in another terminal.
+4. Run `./scripts/check_backend.sh` in another terminal.
 5. Run the iOS app on a physical iPhone from Xcode.
 6. In the app: `Connect -> Start Session -> speak -> wait for tutor voice -> End Session`.
-7. If audio quality is being checked, run `./check_audio_health.sh` after a 3-5 turn session.
+7. If audio quality is being checked, run `./scripts/check_audio_health.sh` after a 3-5 turn session.
 
 中文：
-1. 将根目录 `.env.example` 复制为 `.env` 并填写 LiveKit 配置。
+1. 将根目录 `env.example` 复制为 `env` 并填写 LiveKit 配置。
 2. 在仓库根目录运行 `./start_all.sh`。
 3. 等待看到 `Backend API ready`、`Agent registered worker`、`All backend services ready`。
-4. 另开终端运行 `./check_backend.sh`。
+4. 另开终端运行 `./scripts/check_backend.sh`。
 5. 用 Xcode 在真机运行 iOS App。
 6. App 内执行：`Connect -> Start Session -> 说话 -> 等待 tutor 语音回应 -> End Session`。
-7. 如果要检查语音质量，完成 3-5 轮对话后运行 `./check_audio_health.sh`。
+7. 如果要检查语音质量，完成 3-5 轮对话后运行 `./scripts/check_audio_health.sh`。
 
 ## Logs And Diagnostics
 
 - Backend API log: `logs/api.log`
 - LiveKit agent log: `logs/agent.log`
-- Clear runtime logs: `./clear_logs.sh`
-- Backend diagnostics: `./check_backend.sh`
-- Audio diagnostics: `./check_audio_health.sh`
+- Clear runtime logs: `./scripts/clear_logs.sh`
+- Backend diagnostics: `./scripts/check_backend.sh`
+- Audio diagnostics: `./scripts/check_audio_health.sh`
 - Xcode debug filter: `[test]`
 
 Do not paste real tokens, API keys, API secrets, raw audio, or full private transcripts into issues or review notes.
@@ -41,9 +41,9 @@ Do not paste real tokens, API keys, API secrets, raw audio, or full private tran
 中文：
 - 后端 API 日志：`logs/api.log`
 - LiveKit agent 日志：`logs/agent.log`
-- 清空运行日志：`./clear_logs.sh`
-- 后端诊断：`./check_backend.sh`
-- 音频诊断：`./check_audio_health.sh`
+- 清空运行日志：`./scripts/clear_logs.sh`
+- 后端诊断：`./scripts/check_backend.sh`
+- 音频诊断：`./scripts/check_audio_health.sh`
 - Xcode 调试过滤：`[test]`
 
 不要把真实 token、API key、API secret、原始音频或完整私人转写粘贴到 issue 或 review 说明里。
@@ -81,11 +81,11 @@ Symptoms:
 - LiveKit room has user but no tutor
 
 Checks:
-1. Confirm `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` are set in root `.env`.
+1. Confirm `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` are set in root `env`.
 2. Confirm `LIVEKIT_URL` starts with `wss://`.
 3. Confirm the API key and secret belong to the same LiveKit project as the iOS app.
 4. Check `logs/agent.log` for import errors, authentication errors, or model download errors.
-5. Re-run `./check_backend.sh` after the agent is started.
+5. Re-run `./scripts/check_backend.sh` after the agent is started.
 
 中文：
 症状：
@@ -94,11 +94,11 @@ Checks:
 - LiveKit 房间里有用户但没有 tutor
 
 检查：
-1. 确认根目录 `.env` 设置了 `LIVEKIT_URL`、`LIVEKIT_API_KEY`、`LIVEKIT_API_SECRET`。
+1. 确认根目录 `env` 设置了 `LIVEKIT_URL`、`LIVEKIT_API_KEY`、`LIVEKIT_API_SECRET`。
 2. 确认 `LIVEKIT_URL` 以 `wss://` 开头。
 3. 确认 API key 和 secret 属于 iOS App 使用的同一个 LiveKit project。
 4. 查看 `logs/agent.log` 是否有 import、认证或模型下载错误。
-5. agent 启动后重新运行 `./check_backend.sh`。
+5. agent 启动后重新运行 `./scripts/check_backend.sh`。
 
 ## Duplicate Tutor Voices
 
@@ -237,7 +237,7 @@ Checks:
 1. Confirm root `env` uses `VOICE_PIPELINE_PROFILE=smooth`.
 2. Restart with `./start_all.sh`.
 3. Run a 3-5 turn real-device session.
-4. Run `./check_audio_health.sh`.
+4. Run `./scripts/check_audio_health.sh`.
 5. If smooth still sounds choppy, keep the full audio-check output and inspect iPhone network, route, and LiveKit provider latency.
 
 Profile guidance:
@@ -254,7 +254,7 @@ Profile guidance:
 1. 确认根目录 `env` 使用 `VOICE_PIPELINE_PROFILE=smooth`。
 2. 重新运行 `./start_all.sh`。
 3. 真机完成 3-5 轮对话。
-4. 运行 `./check_audio_health.sh`。
+4. 运行 `./scripts/check_audio_health.sh`。
 5. 如果 smooth 仍卡顿，保留完整 audio-check 输出，并检查 iPhone 网络、音频路由和 LiveKit provider 延迟。
 
 模式建议：
@@ -292,7 +292,7 @@ Expected behavior:
 
 Checks:
 1. Confirm transcript has final learner/tutor turns before ending.
-2. Confirm `/summary` and `/summary/incremental` pass in `./check_backend.sh`.
+2. Confirm `/summary` and `/summary/incremental` pass in `./scripts/check_backend.sh`.
 3. Check Xcode `[test]` storage/network logs.
 4. If AI summary fails, local metadata/summary should still be saved.
 
@@ -304,7 +304,7 @@ Checks:
 
 检查：
 1. 结束前确认 transcript 有 final learner/tutor turns。
-2. 确认 `./check_backend.sh` 中 `/summary` 和 `/summary/incremental` 通过。
+2. 确认 `./scripts/check_backend.sh` 中 `/summary` 和 `/summary/incremental` 通过。
 3. 查看 Xcode `[test]` storage/network 日志。
 4. 如果 AI summary 失败，本地 metadata/summary 仍应保存。
 
@@ -333,16 +333,16 @@ Checks:
 
 ## Before Submission
 
-1. Run `./check_backend.sh`.
-2. Run a real-device session and then `./check_audio_health.sh`.
+1. Run `./scripts/check_backend.sh`.
+2. Run a real-device session and then `./scripts/check_audio_health.sh`.
 3. Run iOS build/tests from Xcode or command line.
 4. Confirm `README.md`, `.env.example`, `plan.md`, `workflow.md`, and this `RUNBOOK.md` are accurate.
 5. Confirm no real secrets, raw audio, generated logs, `.venv`, `__pycache__`, or personal local files are committed.
 
 中文：
 提交前：
-1. 运行 `./check_backend.sh`。
-2. 真机跑一次会话，然后运行 `./check_audio_health.sh`。
+1. 运行 `./scripts/check_backend.sh`。
+2. 真机跑一次会话，然后运行 `./scripts/check_audio_health.sh`。
 3. 从 Xcode 或命令行运行 iOS build/tests。
 4. 确认 `README.md`、`.env.example`、`plan.md`、`workflow.md` 和本 `RUNBOOK.md` 准确。
 5. 确认没有真实密钥、原始音频、生成日志、`.venv`、`__pycache__` 或个人本地文件进入提交。

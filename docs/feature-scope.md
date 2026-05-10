@@ -13,8 +13,8 @@ This document defines the V1 scope for AITutor: complete AI Chat learning loop f
 ## P0: Must-Have Working Demo
 
 1. Backend `.env` config loading
-- All secrets and runtime config load from root `.env`.
-- If `.env` is missing, scripts may create it from the committed placeholder `env`, but existing `.env` always wins to avoid overwriting local secrets.
+- Reviewers edit root `env` from `env.example`.
+- Startup scripts copy root `env` to runtime `.env` before setup/start.
 - Required values include `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET`.
 
 2. Backend health/session APIs
@@ -54,7 +54,7 @@ This document defines the V1 scope for AITutor: complete AI Chat learning loop f
 - `.env.example`
 - `plan.md`
 - `workflow.md`
-- `RUNBOOK.md`
+- `docs/RUNBOOK.md`
 - feature-level `FEATURE.md` files
 
 中文：P0 是必须可演示的基础：后端配置/接口、学习配置影响 prompt、首页和 AI Chat、语音/文字输入、LiveKit 连接、本地 transcript/summary 存储和完整文档。

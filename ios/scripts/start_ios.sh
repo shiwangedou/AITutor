@@ -6,7 +6,7 @@ IOS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ROOT_DIR="$(cd "$IOS_DIR/.." && pwd)"
 PROJECT_PATH="$IOS_DIR/AITutor.xcodeproj"
 CONFIG_SCRIPT="$SCRIPT_DIR/configure_backend_url.sh"
-CLEAR_LOGS_SCRIPT="$ROOT_DIR/clear_logs.sh"
+CLEAR_LOGS_SCRIPT="$ROOT_DIR/scripts/clear_logs.sh"
 
 IOS_OPEN_XCODE="${IOS_OPEN_XCODE:-1}"
 IOS_AUTO_RUN="${IOS_AUTO_RUN:-1}"

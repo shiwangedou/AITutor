@@ -102,14 +102,17 @@ Tutor 应遵循：
 3. Learner opens `AI Chat`.
 4. App automatically creates a backend `/session` and connects to the LiveKit room.
 5. For a fresh empty chat, tutor gives one short warm-up opener; for History Continue, tutor waits quietly.
-6. Learner taps the microphone to enter voice input, sees waveform feedback, taps send to finish, or sends text.
-7. If no speech was captured, voice mode exits without creating an empty message; otherwise the app shows `Listening`, `Tutor Thinking`, and `Tutor Speaking` states.
-8. Transcript/chat messages appear as `You`, `Tutor`, and `System` rows.
-9. Learner ends the session.
-10. App saves local transcript text, metadata, and fallback summary immediately.
-11. AI summary can update asynchronously when available.
-12. Learner reviews the session in History.
-13. Learner can continue from History with the same learning profile plus short previous-session context.
+6. Learner uses the voice button in the chat input area. Auto voice mode is the default; long-pressing the voice button can switch between Auto and Manual voice modes.
+7. In Auto mode, speech can be sent through the LiveKit voice pipeline continuously while the learner stays on Chat. In Manual mode, speech is buffered locally and only appears in the chat after the learner taps send.
+8. Learner sees waveform feedback while recording, or sends text through the same input bar.
+9. If no speech was captured, voice mode exits without creating an empty message; otherwise the app shows `Listening`, `Tutor Thinking`, and `Tutor Speaking` states.
+10. Transcript/chat messages appear as `You`, `Tutor`, and `System` rows, with learner messages visually aligned like a standard mobile chat.
+11. Learner can open the summary as a lightweight bottom sheet without leaving the chat.
+12. Learner ends the session or taps Back; either path disconnects LiveKit, releases audio resources, and stops Chat-scoped background/auto voice behavior.
+13. App saves local transcript text, metadata, and fallback summary immediately.
+14. AI summary can update asynchronously when available.
+15. Learner reviews the session in History.
+16. Learner can continue from History with the same learning profile plus short previous-session context.
 
 中文：
 1. 学习者打开 App，进入首页；
@@ -117,14 +120,17 @@ Tutor 应遵循：
 3. 进入 `AI Chat`；
 4. App 自动创建后端 `/session` 并连接 LiveKit 房间；
 5. 全新空聊天连接后 tutor 给一句简短 warm-up；History Continue 会安静等待学习者继续；
-6. 学习者点击麦克风进入语音输入，看到音波反馈，说完点击发送，或直接发送文字；
-7. 如果没有捕获到语音，则只退出语音模式，不创建空消息；否则 App 展示 `Listening`、`Tutor Thinking`、`Tutor Speaking` 状态；
-8. 聊天/转写列表展示 `You`、`Tutor`、`System` 消息；
-9. 学习者结束会话；
-10. App 立即保存本地 transcript 文本、元数据和 fallback summary；
-11. AI summary 可用时异步更新；
-12. 学习者在 History 中复盘；
-13. 学习者可以从 History 用相同学习配置和上一轮短上下文继续学习。
+6. 学习者使用聊天输入区里的语音按钮。默认是 Auto voice mode；长按语音按钮可以在 Auto 和 Manual voice mode 之间切换；
+7. Auto 模式下，学习者停留在 Chat 页时，语音可通过 LiveKit 语音管线连续发送；Manual 模式下，语音先在本地暂存，只有点击发送后才出现在聊天列表；
+8. 录音时看到音波反馈，也可以通过同一个输入栏直接发送文字；
+9. 如果没有捕获到语音，则只退出语音模式，不创建空消息；否则 App 展示 `Listening`、`Tutor Thinking`、`Tutor Speaking` 状态；
+10. 聊天/转写列表展示 `You`、`Tutor`、`System` 消息，学习者消息按常规移动聊天体验靠右展示；
+11. 学习者可以用底部弹层查看 summary，不需要离开聊天页；
+12. 学习者结束会话或点击返回；两种路径都会断开 LiveKit、释放音频资源，并停止只属于 Chat 页的后台/自动语音行为；
+13. App 立即保存本地 transcript 文本、元数据和 fallback summary；
+14. AI summary 可用时异步更新；
+15. 学习者在 History 中复盘；
+16. 学习者可以从 History 用相同学习配置和上一轮短上下文继续学习。
 
 ## 8. Mobile UX Principles
 The mobile app should prioritize:
@@ -137,6 +143,11 @@ The mobile app should prioritize:
 7. Reconnect fallback to a new room when the current room/token cannot recover.
 8. Separate Diagnostics so debug information does not clutter the learning screen.
 9. No complex app-side setup; backend URL and voice profile remain script/env driven.
+10. Chat should stay conversation-first: minimal system noise, clear learner/tutor alignment, and status shown near the title rather than inside the message stream.
+11. The Chat title should carry connection state with a simple dot: gray for disconnected, orange/blinking for connecting, green for connected.
+12. The input area should feel native on a phone: keyboard-aware layout, tap-above-input to dismiss keyboard, voice button on the left, send button on the right.
+13. Summary should be reachable without breaking the chat context, preferably as a bottom sheet.
+14. Auto voice should be scoped to the Chat screen only; leaving Chat must stop it to avoid surprising background capture.
 
 中文：
 移动端体验应优先保证：
@@ -149,37 +160,46 @@ The mobile app should prioritize:
 7. 当前 room/token 无法恢复时，可 fallback 到新 room；
 8. 将 Diagnostics 独立出来，避免调试信息污染学习页；
 9. App 内不做复杂配置，后端 URL 和语音 profile 仍由脚本/env 控制。
+10. Chat 应优先保持对话感：减少系统提示噪音，清晰区分学习者和 tutor 消息，并把状态放在标题附近而不是塞进消息流；
+11. Chat 标题应通过简单圆点展示连接状态：灰色表示未连接，橙色/闪烁表示连接中，绿色表示已连接；
+12. 输入区要符合手机使用习惯：跟随键盘、点击输入框上方可收起键盘、左侧语音按钮、右侧发送按钮；
+13. Summary 应该在不打断聊天上下文的情况下查看，优先使用底部弹层；
+14. Auto voice 只在 Chat 页面内生效；离开 Chat 必须停止，避免意外后台收音。
 
 ## 9. V1 Must-Have Scope
 1. Home with product positioning, AI Chat entry, focused Words Practice entry, profile card, latest summary, History, Diagnostics, and Settings.
 2. Learning profile editor with mode/style/difficulty/custom goal.
 3. AI Chat that auto-connects, opens fresh empty chats with one short tutor warm-up, and keeps resume-context chats quiet.
-4. Tap-to-record microphone input with waveform feedback, explicit cancel, send-to-finish, and text fallback.
-5. Chat-style message list with user/tutor/system messages and message statuses.
-6. Specific session states and failure states.
-7. Reconnect and back/end-session actions.
-8. Local JSON/Codable storage for latest 20 session records.
-9. Local transcript text and summary storage, no raw audio persistence.
-10. Incremental/final AI summary paths as optional enhancement over local fallback.
-11. History review, simplified detail page, and continue-with-context entry.
-12. Diagnostics and Settings pages with secret-safe information.
-13. Complete README, plan, workflow, todo, runbook, and feature docs.
+4. Voice input with Auto/Manual modes, waveform feedback, explicit cancel, send-to-finish behavior, and text fallback.
+5. Chat-style message list with user/tutor/system messages, learner-right alignment, and message statuses.
+6. Keyboard-aware input bar with voice button, text input, and send button.
+7. Chat title connection indicator and summary bottom sheet.
+8. Specific session states and failure states.
+9. Reconnect and back/end-session actions.
+10. Local JSON/Codable storage for latest 20 session records.
+11. Local transcript text and summary storage, no raw audio persistence.
+12. Incremental/final AI summary paths as optional enhancement over local fallback.
+13. History review, simplified detail page, and continue-with-context entry.
+14. Diagnostics and Settings pages with secret-safe information.
+15. Complete README, plan, workflow, todo, runbook, and feature docs.
 
 中文：
 V1 必须范围：
 1. 首页包含产品定位、AI Chat 入口、聚焦版 Words Practice 入口、学习配置卡片、最近摘要、History、Diagnostics、Settings；
 2. 学习配置编辑：模式、风格、难度、自定义目标；
 3. AI Chat 自动连接；全新空聊天会有一句简短 tutor warm-up，带 resume context 的聊天会保持安静；
-4. 点击式语音输入、音波反馈、显式取消、发送结束和文字 fallback；
-5. 常规聊天列表，包含 user/tutor/system 消息和消息状态；
-6. 具体会话状态和失败状态；
-7. Reconnect 和返回/结束会话；
-8. 本地 JSON/Codable 保存最近 20 条 session；
-9. 保存 transcript 文本和 summary，不保存 raw audio；
-10. 增量/最终 AI summary 作为本地 fallback 之上的增强；
-11. History 复盘、简化详情页和带上下文继续学习入口；
-12. Diagnostics 和 Settings 页面展示脱敏信息；
-13. README、plan、workflow、todo、runbook 和 feature docs 完整。
+4. 支持 Auto/Manual 模式的语音输入、音波反馈、显式取消、发送结束和文字 fallback；
+5. 常规聊天列表，包含 user/tutor/system 消息、学习者消息靠右展示和消息状态；
+6. 跟随键盘的输入栏，包含语音按钮、文字输入框和发送按钮；
+7. Chat 标题连接状态标识和 summary 底部弹层；
+8. 具体会话状态和失败状态；
+9. Reconnect 和返回/结束会话；
+10. 本地 JSON/Codable 保存最近 20 条 session；
+11. 保存 transcript 文本和 summary，不保存 raw audio；
+12. 增量/最终 AI summary 作为本地 fallback 之上的增强；
+13. History 复盘、简化详情页和带上下文继续学习入口；
+14. Diagnostics 和 Settings 页面展示脱敏信息；
+15. README、plan、workflow、todo、runbook 和 feature docs 完整。
 
 ## 10. Not In V1
 V1 intentionally does not include:
@@ -238,7 +258,8 @@ V1 明确不做：
 5. Summary generation uses transcript text, not raw audio.
 6. Continue from History sends only short text context: previous summary, optional AI summary, and a limited transcript excerpt.
 7. Tokens, API keys, and API secrets must never appear in UI, logs, or committed docs.
-8. Runtime secrets/config come from ignored root `.env`; committed `env` / `env.example` / `.env.example` files are placeholder templates only.
+8. History review should restore local transcript text, but the agent should receive only bounded context rather than the full historical conversation.
+9. `env.example` and `.env.example` stay aligned. Reviewers can copy either template to root `env`; startup scripts copy `env` to ignored runtime `.env` before setup/start.
 
 中文：
 1. 不持久化原始音频；
@@ -248,7 +269,8 @@ V1 明确不做：
 5. 摘要生成只使用 transcript 文本，不使用 raw audio；
 6. 从 History 继续时，只发送短文本上下文：上一轮 summary、可选 AI summary 和有限 transcript 摘录；
 7. token、API key、API secret 不能出现在 UI、日志或提交文档中；
-8. 运行时密钥/配置来自被 git 忽略的根目录 `.env`；已提交的 `env`、`env.example`、`.env.example` 只作为 placeholder 模板。
+8. History 复盘应恢复本地 transcript 文本，但发送给 agent 的只应该是有限上下文，而不是完整历史对话；
+9. `env.example` 和 `.env.example` 保持一致。评审者可以复制任一模板为根目录 `env`；启动脚本会在 setup/start 前复制 `env` 到被 git 忽略的运行时 `.env`。
 
 ## 13. Key Tradeoffs
 - Prioritize stable demo flow over feature breadth.
@@ -258,6 +280,8 @@ V1 明确不做：
 - Use local JSON/Codable instead of Core Data because V1 only needs recent sessions.
 - Keep Words Practice focused on target-word speaking sessions to show product direction without diluting the AI Chat implementation.
 - Keep Diagnostics separate from Chat to preserve learner focus while still supporting debugging.
+- Default to Auto voice for a more natural mobile tutoring flow, but keep Manual voice for controlled demos and cases where transcript timing matters.
+- Send compact History context instead of full prior transcripts to reduce latency, avoid prompt bloat, and limit unnecessary data sharing.
 
 中文：
 关键取舍：
@@ -268,6 +292,8 @@ V1 明确不做：
 - 使用本地 JSON/Codable 而不是 Core Data，因为 V1 只需要最近会话；
 - Words Practice 聚焦目标词口语会话，用来展示产品方向，但不稀释 AI Chat 主链路；
 - Diagnostics 独立于 Chat，既保证学习页聚焦，也方便排障。
+- 默认使用 Auto voice，让移动端口语练习更自然；同时保留 Manual voice，方便可控演示以及需要更明确 transcript 时序的场景；
+- 从 History 继续时只发送压缩上下文，而不是完整历史 transcript，以降低延迟、避免 prompt 膨胀，并减少不必要的数据传递。
 
 ## 14. Risks and Mitigations
 1. LiveKit SDK version differences
@@ -327,13 +353,15 @@ V1 明确不做：
 5. Home, Customize, AI Chat, History, Diagnostics, and Settings are reachable.
 6. Learning profile is sent to `/session`, returned normalized, saved locally, and used by agent prompt.
 7. AI Chat auto-connects; fresh empty chats get one short tutor opener, while History Continue waits for learner input.
-8. One full voice loop works on a physical iPhone.
-9. Text fallback works when voice is unavailable.
-10. Back navigation or End Session disconnects, releases audio, saves transcript text and local summary.
-11. History can show saved session review.
-12. History Continue can start a new room with short previous-session context.
-13. No raw audio, token, API key, or API secret is stored or logged.
-14. Required deliverables exist: `README.md`, `.env.example`, `plan.md`, and `workflow.md`.
+8. Auto voice and Manual voice can be switched from the chat input; Auto supports continuous Chat-scoped voice, while Manual only commits speech after send.
+9. Chat input follows the keyboard, supports tap-to-dismiss, shows connection state in the title, and opens summary as a bottom sheet.
+10. One full voice loop works on a physical iPhone.
+11. Text fallback works when voice is unavailable.
+12. Back navigation or End Session disconnects, releases audio, saves transcript text and local summary, and stops Chat-scoped auto voice.
+13. History can show saved session review.
+14. History Continue can start a new room with short previous-session context without sending the full historical transcript.
+15. No raw audio, token, API key, or API secret is stored or logged.
+16. Required deliverables exist: `README.md`, `.env.example`, `plan.md`, and `workflow.md`; `env.example` and `.env.example` remain aligned.
 
 中文：
 验收标准：
@@ -344,10 +372,12 @@ V1 明确不做：
 5. Home、Customize、AI Chat、History、Diagnostics、Settings 可进入；
 6. 学习配置会发送到 `/session`，后端标准化返回，本地保存，并用于 agent prompt；
 7. AI Chat 自动连接；全新空聊天会有一句简短 tutor 开场，History Continue 会等待学习者输入；
-8. 真机完成一次完整语音闭环；
-9. 语音不可用时文字 fallback 可用；
-10. 返回离开 Chat 或 End Session 会断开连接、释放音频、保存 transcript 文本和本地摘要；
-11. History 可查看保存的会话复盘；
-12. History Continue 可以用上一轮短上下文开启新 room；
-13. 不保存或输出 raw audio、token、API key、API secret；
-14. 必交文件完整：`README.md`、`.env.example`、`plan.md`、`workflow.md`。
+8. Chat 输入区可以切换 Auto voice 和 Manual voice；Auto 支持只在 Chat 页生效的连续语音，Manual 只有点击发送后才提交语音；
+9. Chat 输入区跟随键盘、支持点击收起键盘、标题展示连接状态，并用底部弹层打开 summary；
+10. 真机完成一次完整语音闭环；
+11. 语音不可用时文字 fallback 可用；
+12. 返回离开 Chat 或 End Session 会断开连接、释放音频、保存 transcript 文本和本地摘要，并停止只属于 Chat 页的 auto voice；
+13. History 可查看保存的会话复盘；
+14. History Continue 可以用上一轮短上下文开启新 room，不发送完整历史 transcript；
+15. 不保存或输出 raw audio、token、API key、API secret；
+16. 必交文件完整：`README.md`、`.env.example`、`plan.md`、`workflow.md`；`env.example` 和 `.env.example` 保持一致。

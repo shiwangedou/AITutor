@@ -8,7 +8,7 @@ LOG_DIR="$ROOT_DIR/logs"
 API_LOG="$LOG_DIR/api.log"
 AGENT_LOG="$LOG_DIR/agent.log"
 IOS_START_SCRIPT="$ROOT_DIR/ios/scripts/start_ios.sh"
-CLEAR_LOGS_SCRIPT="$ROOT_DIR/clear_logs.sh"
+CLEAR_LOGS_SCRIPT="$ROOT_DIR/scripts/clear_logs.sh"
 
 API_PID=""
 AGENT_PID=""
@@ -146,6 +146,6 @@ elif [[ "$START_IOS_APP" != "1" ]]; then
 fi
 
 log "Press Ctrl+C to stop both services"
-log "Optional: run ./check_backend.sh from project root for a full diagnostic pass"
+log "Optional: run ./scripts/check_backend.sh from project root for a full diagnostic pass"
 
 wait -n "$API_PID" "$AGENT_PID"
