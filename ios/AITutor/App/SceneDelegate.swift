@@ -13,7 +13,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let window = UIWindow(windowScene: windowScene)
         window.backgroundColor = .systemBackground
 
-        let navigationController = UINavigationController(rootViewController: SessionViewController())
+        let environment = AppEnvironment.live()
+        let navigationController = UINavigationController(rootViewController: HomeViewController(environment: environment))
         navigationController.view.backgroundColor = .systemBackground
         window.rootViewController = navigationController
         window.makeKeyAndVisible()
@@ -25,6 +26,11 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         NotificationCenter.default.post(name: .appSceneDidEnterBackground, object: nil)
     }
 
+    func sceneWillResignActive(_ scene: UIScene) {
+        AppLogger.debug("Scene will resign active. Prepare any enabled continuous voice session before background suspension.", category: .app)
+        NotificationCenter.default.post(name: .appSceneWillResignActive, object: nil)
+    }
+
     func sceneWillEnterForeground(_ scene: UIScene) {
         AppLogger.debug("Scene will enter foreground. Verify LiveKit connection and audio route after returning.", category: .app)
         NotificationCenter.default.post(name: .appSceneWillEnterForeground, object: nil)
@@ -32,6 +38,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 }
 
 extension Notification.Name {
+    static let appSceneWillResignActive = Notification.Name("AITutor.appSceneWillResignActive")
     static let appSceneDidEnterBackground = Notification.Name("AITutor.appSceneDidEnterBackground")
     static let appSceneWillEnterForeground = Notification.Name("AITutor.appSceneWillEnterForeground")
 }

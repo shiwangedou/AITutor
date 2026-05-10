@@ -6,11 +6,12 @@ Use these scripts to run the backend demo locally.
 
 ## Prerequisite
 
-Edit the Finder-visible root `env` file before starting services.
-The scripts automatically copy `env` to `.env` before setup/start.
+Copy root `.env.example` to `.env` before starting services.
+The scripts prefer an existing `.env`; the committed root `env` file is only a safe placeholder fallback.
 
 ```bash
-open ../env
+cp ../.env.example ../.env
+open ../.env
 ```
 
 Fill:
@@ -18,7 +19,7 @@ Fill:
 - `LIVEKIT_API_KEY`
 - `LIVEKIT_API_SECRET`
 
-中文：启动前编辑 Finder 可见的根目录 `env` 文件。脚本会在 setup/start 前自动复制 `env` 到 `.env`。
+中文：启动前将根目录 `.env.example` 复制为 `.env` 并填写真实配置。脚本会优先使用已有 `.env`；已提交的根目录 `env` 只是安全 placeholder 兜底。
 Finder-visible templates are also available at root as `env` and `env.example`.
 
 中文：根目录也提供 Finder 可见模板 `env` 和 `env.example`。

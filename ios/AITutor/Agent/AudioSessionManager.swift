@@ -17,9 +17,11 @@ enum MicrophonePermissionStatus: String, Equatable {
 }
 
 final class AudioSessionManager: AudioSessionManaging {
+    private let notificationCenter: NotificationCenter
     private var notificationObservers: [NSObjectProtocol] = []
 
     init(notificationCenter: NotificationCenter = .default) {
+        self.notificationCenter = notificationCenter
         notificationObservers.append(
             notificationCenter.addObserver(
                 forName: AVAudioSession.interruptionNotification,
@@ -41,7 +43,7 @@ final class AudioSessionManager: AudioSessionManaging {
     }
 
     deinit {
-        notificationObservers.forEach(NotificationCenter.default.removeObserver)
+        notificationObservers.forEach(notificationCenter.removeObserver)
     }
 
     func microphonePermissionStatus() -> MicrophonePermissionStatus {

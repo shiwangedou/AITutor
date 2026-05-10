@@ -153,9 +153,25 @@ def check_backend_api(base_url: str, verbose: bool) -> bool:
         status, payload = request_json(
             f"{base_url}/session",
             method="POST",
-            body={"display_name": "Diagnostics Learner"},
+            body={
+                "display_name": "Diagnostics Learner",
+                "resume_context": {
+                    "source_session_id": "diagnostics",
+                    "summary": "Diagnostics context smoke test.",
+                },
+            },
         )
-        required = ["livekit_url", "tutor_subject", "token", "room_name", "participant_identity", "issued_at", "session_id"]
+        required = [
+            "livekit_url",
+            "tutor_subject",
+            "learning_profile",
+            "token",
+            "room_name",
+            "participant_identity",
+            "issued_at",
+            "session_id",
+            "resume_context",
+        ]
         missing = [key for key in required if key not in payload]
 
         if status == 200 and not missing:
@@ -186,6 +202,12 @@ def check_backend_api(base_url: str, verbose: bool) -> bool:
         "duration_seconds": 42,
         "transcript": "You: Hello, I am practicing English.\nTutor: Nice start. What did you do today?",
         "running_summary": "Diagnostics running summary draft.",
+        "learning_profile": {
+            "learning_mode": "daily_conversation",
+            "tutor_style": "gentle_coach",
+            "difficulty": "intermediate",
+            "custom_goal": "Practice a short warm-up conversation.",
+        },
     }
     try:
         status, payload = request_json(
@@ -218,6 +240,11 @@ def check_backend_api(base_url: str, verbose: bool) -> bool:
             "You: I visited a museum today.",
             "Tutor: Good sentence. Try saying: I went to a museum today.",
         ],
+        "learning_profile": {
+            "learning_mode": "daily_conversation",
+            "tutor_style": "gentle_coach",
+            "difficulty": "intermediate",
+        },
         "finalize": False,
     }
     try:

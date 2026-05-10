@@ -30,6 +30,7 @@
 		D0000000000000000000003A /* BackendAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000026 /* BackendAPIClient.swift */; };
 		D0000000000000000000003B /* SessionConfigDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000027 /* SessionConfigDTO.swift */; };
 		D0000000000000000000003C /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000029 /* LaunchScreen.storyboard */; };
+		D00000000000000000000060 /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000061 /* Icon.png */; };
 		D00000000000000000000014 /* LiveKit in Frameworks */ = {isa = PBXBuildFile; productRef = D00000000000000000000012 /* LiveKit */; };
 		D00000000000000000000015 /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = D00000000000000000000013 /* SnapKit */; };
 /* End PBXBuildFile section */
@@ -71,6 +72,7 @@
 		D00000000000000000000027 /* SessionConfigDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionConfigDTO.swift; sourceTree = "<group>"; };
 		D00000000000000000000028 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D00000000000000000000029 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		D00000000000000000000061 /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -149,6 +151,7 @@
 				D00000000000000000000018 /* AppConfig.swift */,
 				D00000000000000000000019 /* AppDelegate.swift */,
 				D0000000000000000000001A /* AppEnvironment.swift */,
+				D00000000000000000000061 /* Icon.png */,
 				D00000000000000000000028 /* Info.plist */,
 				D00000000000000000000029 /* LaunchScreen.storyboard */,
 				D0000000000000000000001B /* SceneDelegate.swift */,
@@ -345,6 +348,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D00000000000000000000060 /* Icon.png in Resources */,
 				D0000000000000000000003C /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -510,7 +514,7 @@
 		D0000000000000000000000E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BACKEND_BASE_URL = "http://10.100.11.193:8000";
+				BACKEND_BASE_URL = "http://192.168.0.107:8000";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = MKDWSCTD3X;
@@ -532,7 +536,7 @@
 		D0000000000000000000000F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BACKEND_BASE_URL = "http://10.100.11.193:8000";
+				BACKEND_BASE_URL = "http://192.168.0.107:8000";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = MKDWSCTD3X;

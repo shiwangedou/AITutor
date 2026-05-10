@@ -1,8 +1,8 @@
 # LiveKit Cloud project config
 # Get these from LiveKit Cloud -> Project -> Settings -> Keys.
-LIVEKIT_URL=wss://aitutor-kmp33qk8.livekit.cloud
-LIVEKIT_API_KEY=APIAYEnQGg83WMi
-LIVEKIT_API_SECRET=AHYQflcUCpJ0sDylDFJUQYVF8nDYbBaqL9d4aRDsQtZ
+LIVEKIT_URL=wss://your-project.livekit.cloud
+LIVEKIT_API_KEY=your_livekit_api_key
+LIVEKIT_API_SECRET=your_livekit_api_secret
 
 # App behavior
 LIVEKIT_ROOM_PREFIX=aitutor-
@@ -13,3 +13,9 @@ VOICE_PIPELINE_PROFILE=smooth
 # Backend
 BACKEND_HOST=0.0.0.0
 BACKEND_PORT=8000
+
+# Optional summary tuning
+# These still use LiveKit Inference by default; no extra model API key is required.
+SUMMARY_LLM_MODEL=openai/gpt-4.1-nano
+SUMMARY_LLM_MAX_TOKENS=260
+SUMMARY_LLM_TEMPERATURE=0.2

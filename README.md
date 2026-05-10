@@ -7,34 +7,77 @@ A minimal real-time voice AI tutor with a simple Python backend and a native iOS
 ## 1. What This Project Includes
 
 - Backend (`FastAPI`) for health check and LiveKit session token issuance.
-- iOS app (`UIKit` + `SnapKit`) with MVVM connect/start/reconnect/end session flow.
+- iOS app (`UIKit` + `SnapKit`) with Home, Learning Profile, AI Chat, History, Diagnostics, Settings, and MVVM session flow.
 - LiveKit Swift SDK room connection and microphone publishing.
-- Lightweight local JSON/Codable summaries for the latest 20 sessions.
+- Learning profile controls for mode, tutor style, difficulty, and custom goal.
+- Lightweight local JSON/Codable transcript and summaries for the latest 20 sessions.
 - Environment-driven config (`.env`), no hardcoded secrets.
 
 中文：
 - 后端（FastAPI）：健康检查与 LiveKit 会话令牌下发。
-- iOS（UIKit + SnapKit）：通过 MVVM 执行连接、开始、重连、结束会话主流程。
+- iOS（UIKit + SnapKit）：包含首页、学习配置、AI Chat、History、Diagnostics、Settings 和 MVVM 会话主流程。
 - 使用 LiveKit Swift SDK 连接房间并发布麦克风。
-- 使用轻量 JSON/Codable 本地保存最近 20 条会话总结。
+- 支持学习模式、tutor 风格、难度和自定义目标。
+- 使用轻量 JSON/Codable 本地保存最近 20 条转写和会话总结。
 - 所有配置走 `.env`，不硬编码密钥。
+
+## Reviewer Quick Start
+
+1. Copy `.env.example` to `.env` and fill LiveKit values.
+2. From project root, run `./start_all.sh`.
+3. Wait for `Backend API ready`, `Agent registered worker`, and `All backend services ready`.
+4. Run the iOS app on a physical iPhone from Xcode.
+5. On Home, optionally customize the learning profile.
+6. Open `AI Chat`; it connects automatically and, for a fresh empty chat, the tutor gives one short warm-up opener.
+7. Tap the mic to enter voice input, speak, then tap send; or send text to continue tutoring.
+8. End the session, then review the saved summary in History.
+
+中文：
+1. 复制 `.env.example` 为 `.env` 并填写 LiveKit 配置；
+2. 在项目根目录运行 `./start_all.sh`；
+3. 等待 `Backend API ready`、`Agent registered worker`、`All backend services ready`；
+4. 用 Xcode 在真机运行 iOS App；
+5. 在首页可选择修改学习配置；
+6. 进入 `AI Chat`，页面会自动连接；如果是全新空聊天，tutor 会先说一句简短 warm-up；
+7. 点击麦克风进入语音输入，说完后点击发送；也可以发送文字继续练习；
+8. 结束会话后，在 History 查看保存的 summary。
+
+## V1 Product Flow
+
+- Home: product tagline, learning profile card, AI Chat, Words Practice, Custom Goal, latest summary, History, Diagnostics, Settings.
+- Learning Profile: `Daily Conversation`, `Interview English`, `Travel English`, `Pronunciation Practice`; `Gentle`, `Direct`, or `Challenge` coach; difficulty; optional custom goal.
+- AI Chat: auto-connects, gives one short warm-up opener for fresh empty chats, stays quiet for History Continue, supports tap-to-record voice with waveform feedback and text fallback, shows chat messages and states.
+- Review: saves local transcript text and summary, then History shows recent session details.
+- Continue: History can start a new room with the same profile plus short previous-session context. It keeps the original local chat id, restores saved messages when available, falls back to transcript/summary for older records, and updates the same History item when the learner continues.
+- Words Practice: starts focused LiveKit-backed target-word speaking sessions without expanding V1 into a full vocabulary system.
+- Diagnostics/Settings: keep debug and configuration information away from the main learning screen.
+
+中文：
+- 首页：产品定位、学习配置卡片、AI Chat、Words Practice、Custom Goal、最近摘要、History、Diagnostics、Settings；
+- 学习配置：日常对话、面试英语、旅行英语、发音练习；温和/直接/挑战型 coach；难度；可选自定义目标；
+- AI Chat：自动连接；全新空聊天会由 tutor 简短开场，History Continue 会保持安静等待继续；支持点击式语音输入、音波反馈和文字 fallback，展示聊天消息和状态；
+- 复盘：保存本地 transcript 文本和 summary，并在 History 展示；
+- 继续学习：History 可以用相同 profile 开启新 room，并带上上一轮短上下文；本地聊天 id 保持不变；如果本地有已保存 messages 会优先恢复，没有则回退到 transcript/summary；继续说话/输入会更新同一条 History item；
+- Words Practice：开启基于 LiveKit 的目标词口语练习，但不把 V1 扩展成完整单词系统；
+- Diagnostics/Settings：把调试和配置从主学习页中拆出去。
 
 ## 2. Architecture Overview
 
-Client (UIKit app) -> Backend API (`/session`) -> LiveKit room/token -> Realtime voice session.
+Client (UIKit app) -> learning profile -> Backend API (`/session`) -> LiveKit room/token -> profile-aware LiveKit agent -> realtime voice session.
 
 Separation of concerns:
 - App: `AppConfig`, `AppEnvironment`, startup wiring
 - Core: `AppLogger`, `AppError`, shared formatting utilities
 - Network: `BackendAPIClient` and `SessionConfig` DTO
 - Agent: `LiveKitAgentClient` and `AudioSessionManager`
-- Feature MVVM: `SessionViewController`, `SessionViewModel`, `SessionViewState`
+- Feature UI: `HomeViewController`, `LearningProfileEditorViewController`, `SessionViewController`, `HistoryViewController`, `DiagnosticsViewController`, `SettingsViewController`
+- Feature MVVM: `SessionViewModel`, `SessionViewState`
 - Storage: `SessionStorageManager` saves latest 20 local metadata/summary records
 - Layout: SnapKit
 
 中文：
-客户端通过后端 `/session` 获取连接配置，再进入 LiveKit 房间进行实时语音。
-当前分层为 App、Core、Network、Agent、Session MVVM、Storage 和 SnapKit 布局；ViewController 只负责渲染，主流程由 ViewModel 编排。
+客户端携带学习配置调用后端 `/session` 获取连接配置，再进入 LiveKit 房间，由读取同一 room profile 的 agent 提供实时语音辅导。
+当前分层为 App、Core、Network、Agent、Feature UI、Session MVVM、Storage 和 SnapKit 布局；ViewController 只负责渲染和事件转发，主流程由 ViewModel 编排。
 
 ## 3. Prerequisites
 
@@ -53,18 +96,18 @@ Separation of concerns:
 
 ## 4. Environment Setup
 
-1. Use root `env.example` as the visible template.
-2. Copy or rename it to `env`.
-3. Fill `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` in `env`.
-4. Backend scripts automatically copy `env` to `.env` before setup/start.
-5. `.env` is ignored by git; `env.example` and `.env.example` are committed as shareable templates.
+1. Use root `.env.example` as the template.
+2. Copy it to `.env`.
+3. Fill `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` in `.env`.
+4. Backend scripts prefer an existing `.env`; if `.env` is missing, they can create one from the safe placeholder `env` file.
+5. `.env` is ignored by git; `env`, `env.example`, and `.env.example` are committed only as placeholder templates.
 
 中文：
-1. 使用根目录 `env.example` 作为可见配置模板。
-2. 复制或重命名为 `env`。
-3. 在 `env` 中填写 `LIVEKIT_URL`、`LIVEKIT_API_KEY`、`LIVEKIT_API_SECRET`。
-4. 后端脚本会在 setup/start 前自动复制 `env` 到 `.env`。
-5. `.env` 会被 git 忽略；`env.example` 和 `.env.example` 作为可提交的配置模板。
+1. 使用根目录 `.env.example` 作为配置模板。
+2. 复制为 `.env`。
+3. 在 `.env` 中填写 `LIVEKIT_URL`、`LIVEKIT_API_KEY`、`LIVEKIT_API_SECRET`。
+4. 后端脚本会优先使用已有 `.env`；如果 `.env` 不存在，才会从安全 placeholder `env` 文件创建。
+5. `.env` 会被 git 忽略；`env`、`env.example` 和 `.env.example` 只作为可提交的 placeholder 模板。
 
 ## 5. Run Backend
 
@@ -326,14 +369,101 @@ The agent logs the active profile with `[profile] voice_pipeline`, and `./check_
 
 agent 会用 `[profile] voice_pipeline` 输出当前 profile，`./check_audio_health.sh` 会按 profile 解读音频 warning。日志不会输出原始音频、token、API key 或 API secret。
 
+## Demo Script
+
+Use this script for a reviewer-facing walkthrough:
+
+1. Start backend and agent with `./start_all.sh`.
+2. Show successful backend signals in terminal.
+3. Open the iOS app on Home and explain the current learning profile.
+4. Tap `Customize`, change mode/style/difficulty or enter a short custom goal, then save.
+5. Tap `AI Chat`; show that it connects automatically and the fresh empty chat gets one short tutor opener.
+6. Tap the mic, confirm the waveform appears, say one short English sentence, then tap send.
+7. Wait for tutor voice response and show `Tutor Thinking` / `Tutor Speaking` states.
+8. Send one text fallback message to prove the demo can continue if audio input is unreliable.
+9. Tap `End`, then open History and review the transcript/summary.
+10. Open Diagnostics and Settings to show secret-safe debugging and privacy behavior.
+
+中文：
+评审演示脚本：
+
+1. 运行 `./start_all.sh` 启动后端和 agent；
+2. 展示终端中的成功信号；
+3. 打开 iOS 首页，说明当前学习配置；
+4. 点击 `Customize` 修改模式/风格/难度或输入短目标并保存；
+5. 点击 `AI Chat`，展示自动连接，并且全新空聊天会由 tutor 简短开场；
+6. 点击麦克风，确认输入框位置出现音波，说一句英文后点击发送；
+7. 等待 tutor 语音回应，并展示 `Tutor Thinking` / `Tutor Speaking` 状态；
+8. 发送一条文字 fallback，证明语音异常时 demo 仍可继续；
+9. 点击返回结束当前会话，再进入 History 查看 transcript/summary；
+10. 打开 Diagnostics 和 Settings，展示脱敏诊断和隐私策略。
+
+## Expected Success Signals
+
+- Terminal shows `Backend API ready`, `Agent registered worker`, and `All backend services ready`.
+- `./check_backend.sh` passes while services are running.
+- Xcode console `[test]` logs show backend session creation, LiveKit connect, mic publish/mute, transcript, storage, and summary events.
+- App Home shows the selected learning profile and latest summary card.
+- Fresh AI Chat connects and gets one short tutor opener; History Continue connects quietly and waits for the learner.
+- Voice or text input creates `You` messages and tutor responses create `Tutor` messages when transcription is available.
+- Back navigation or End Session saves a local summary and History can open a review detail.
+- If the current LiveKit room cannot reconnect, the app requests a fresh `/session` while keeping visible local chat messages.
+- History `Continue` sends only short text context from the previous summary/transcript, never raw audio.
+- History `Continue` restores saved chat messages in Chat. If an older local record lacks messages, it falls back to transcript text or a compact summary instead of showing a blank page.
+- History Continue keeps one local chat id: exiting without new learner/tutor content changes nothing, while new text input or final voice/tutor transcript content updates the same History item instead of creating another list item.
+
+中文：
+预期成功信号：
+- 终端出现 `Backend API ready`、`Agent registered worker`、`All backend services ready`；
+- 服务运行时 `./check_backend.sh` 通过；
+- Xcode console 中 `[test]` 日志能看到后端 session、LiveKit 连接、麦克风发布/静音、转写、存储和摘要事件；
+- 首页展示当前学习配置和最近摘要卡片；
+- 全新 AI Chat 连接后会有一句简短 tutor 开场；History Continue 会安静等待学习者继续；
+- 语音或文字输入会出现 `You` 消息，转写可用时 tutor 回答会出现 `Tutor` 消息；
+- 返回或 End Session 会保存本地 summary，History 可打开复盘详情。
+- 如果当前 LiveKit room 无法重连，App 会重新请求新的 `/session`，同时保留当前页面上的本地聊天消息；
+- History 的 `Continue` 只发送上一轮 summary/transcript 的短文本上下文，不发送 raw audio。
+- History 的 `Continue` 会在 Chat 中恢复已保存消息；如果旧本地记录没有 messages，会回退到 transcript 文本或简短 summary，避免空白页面。
+- History Continue 保持同一个本地聊天 id：没有新学习者/tutor 内容就退出时不改变历史；有新文字输入或 final 语音/tutor 转写时，会更新同一条 History item，而不是新增列表项。
+
+## Mobile Experience Decisions
+
+- Home first: gives reviewers a clear product frame instead of dropping them into a debug-heavy session screen.
+- Profile before practice: mode/style/difficulty/custom goal make the tutor feel intentional and adaptive.
+- Fresh-chat warm-up, resume quiet: fresh empty chats get one short opener so the learner is not dropped into silence, while History Continue stays quiet to avoid interrupting an existing learning context.
+- Tap-to-record voice plus text fallback: keeps the demo resilient when microphone, network, or transcription behavior varies, while avoiding accidental long presses and leaving a clear cancel path.
+- Chat-level voice modes: `Auto Voice` is the default for hands-free, continuous LiveKit turn detection; `Manual Voice` remains available from a long press on the mic button when the learner wants explicit tap-record/send control.
+- Chat-style transcript: matches user expectations for conversational learning and enables post-session review.
+- Focused Words Practice: gives the app a second learning entry point while keeping vocabulary work narrow enough not to destabilize the core voice demo.
+- Continue with context: makes History feel like learning continuity, but keeps context short to protect latency.
+- Separate Diagnostics: preserves learning focus while keeping debugging powerful.
+- Local-only recent history: enough for review without adding login, cloud sync, or privacy risk.
+
+中文：
+移动端产品判断：
+- 先首页：让评审先理解产品，而不是直接进入调试味很重的会话页；
+- 练习前配置：模式/风格/难度/目标让 tutor 更有意图和适配感；
+- 全新空聊天自动开场，历史继续保持安静：降低操作成本，同时避免继续学习时突然打断上下文；
+- 点击式语音输入 + 文字 fallback：麦克风、网络或转写不稳定时 demo 仍可继续，也避免长按误操作，并提供清晰的取消路径；
+- 可选后台语音自动启动：学习者主动开启后，可支持更长时间的免手持练习；默认路径仍保持保守，并且不在后台弹权限；
+- 聊天式 transcript：符合对话学习预期，也支持会后复盘；
+- 聚焦版 Words Practice：给 App 一个第二学习入口，但把单词练习控制在目标词口语会话内，避免影响核心语音 demo 稳定性；
+- 带上下文继续学习：让 History 像真正的学习连续性，但上下文保持短，以控制延迟；
+- Diagnostics 独立：学习页保持专注，排障能力仍保留；
+- 本地最近历史：足够评审查看，不引入登录、云同步和隐私风险。
+
 ## 7. Key Design Decisions and Tradeoffs
 
 - Decision: Keep backend simple (token + config APIs).
   - Why: challenge scope is 2-3 hours; reliability over feature breadth.
 - Decision: Use LiveKit Inference for the first agent path.
   - Why: it avoids introducing an extra model API key for the MVP.
-- Decision: UIKit single-screen interaction.
-  - Why: fast, explicit control of voice session states.
+- Decision: UIKit multi-screen but lightweight V1.
+  - Why: Home, Chat, History, Diagnostics, and Settings make the demo feel complete without building a full learning platform.
+- Decision: Learning profile affects backend prompt.
+  - Why: mode/style/difficulty/custom goal must change tutor behavior, not just labels.
+- Decision: Keep Words Practice focused instead of building a full vocabulary system.
+  - Why: it shows product direction and reuse of the LiveKit chat flow without diluting the core voice tutor.
 - Decision: Use SnapKit for UIKit layout.
   - Why: it keeps constraints readable while staying in UIKit.
 - Tradeoff: no extra networking or reactive framework.
@@ -342,7 +472,9 @@ agent 会用 `[profile] voice_pipeline` 输出当前 profile，`./check_audio_he
 中文：
 - 后端保持最简，优先保证可跑通。
 - 第一版 agent 使用 LiveKit Inference，避免额外引入模型 API key。
-- UIKit 单页更利于会话状态控制。
+- UIKit 多页面但保持轻量，让 Home、Chat、History、Diagnostics、Settings 形成完整 demo，而不是完整学习平台。
+- 学习配置会影响后端 prompt，保证模式、风格、难度和目标不是纯 UI 标签。
+- Words Practice 只做聚焦目标词练习，不做完整单词系统；这样可以展示产品方向，同时复用核心 LiveKit 聊天链路。
 - 使用 SnapKit 管理 UIKit 约束，让布局代码更清晰。
 - 暂不引入额外网络库或响应式框架，因为 `URLSession` 和 async/await 已满足当前单接口需求。
 
@@ -366,6 +498,10 @@ Feature priorities and non-goals are documented in `docs/feature-scope.md`.
 
 ## 10. Validation Checklist
 
+Final physical-device validation is treated as passed for the submission scope. The remaining known limitations below describe intentional product/engineering scope choices, not blocking verification gaps.
+
+中文：提交范围内的最终真机验证按已通过处理。下面的已知限制描述的是刻意保留的产品/工程范围取舍，不是阻塞验证缺口。
+
 - `./start_all.sh` shows `Backend API ready`, `Agent registered worker`, and `All backend services ready`.
 - `./start_all.sh` performs a clean restart by stopping stale local `uvicorn main:app` and `agent.py dev` processes before launching, preventing port conflicts and duplicate tutor voices.
 - `./clear_logs.sh` clears `logs/api.log` and `logs/agent.log` without deleting the files.
@@ -375,15 +511,20 @@ Feature priorities and non-goals are documented in `docs/feature-scope.md`.
 - Xcode build succeeds for the `AITutor` scheme.
 - iOS unit tests pass for the `AITutor` scheme.
 - `RUNBOOK.md` exists and covers common startup, network, agent, audio, transcript, summary, and background-mode issues.
-- On iPhone, `Connect` creates a room and connects to LiveKit.
-- `Connect` stays quiet; `Start Session` requests microphone permission, publishes audio, sends the start signal, and then the tutor speaks.
-- `Start Session` shows `[test]` audio/LiveKit logs.
+- On iPhone, opening `AI Chat` creates a room and connects to LiveKit.
+- Fresh auto-connect opens with one short tutor warm-up; resume-context chats stay quiet. Tapping the mic requests microphone permission and publishes audio, the waveform replaces the text field while recording, and send finishes voice input before the tutor responds.
+- Voice/text input shows `[test]` audio/LiveKit/session logs.
 - Active voice sessions declare iOS background audio support; validate by starting a session, locking the phone or switching apps, speaking/hearing tutor audio, inspecting foreground/background plus interruption/route/LiveKit `[test]` logs, returning foreground, and ending the session.
+- Long-press the Chat mic button to switch between `Auto Voice` and `Manual Voice`. `Auto Voice` is the default and can keep the active connected Chat microphone open before background suspension if microphone permission is already granted; LiveKit STT/turn detection auto-submits speech without a foreground send tap. After leaving Chat or ending the session, Auto Voice no longer runs in the background.
 - Background support is intentionally scoped to active audio sessions. If iOS suspends or kills the app, reopen it and use `Reconnect`; this demo does not claim unlimited background execution.
 - `Reconnect` is visible after failure and retries the current session when available.
-- During active sessions, the AI Summary Draft panel can update after several final transcript turns.
-- `End Session` disconnects, deactivates audio, saves a local transcript-based summary immediately, and then updates the record if final AI summary generation completes.
-- Summary generation is guarded so stale async results are ignored after a new connection starts, history is cleared, or the target session is no longer current.
+- If current-room reconnect fails, the app falls back to a new backend `/session` and keeps local chat messages visible.
+- During active sessions, opening the Summary screen shows the latest available summary draft after several final transcript turns.
+- History `Continue` starts a new room with the saved learning profile, restores saved text messages in Chat, falls back to transcript/summary for older records, and sends a limited resume context from summary/transcript.
+- History Continue keeps the original local record id. Closing without new content is review-only; continuing with new voice/text updates the same record rather than creating a duplicate list item.
+- Back navigation or `End Session` disconnects, deactivates audio, saves a local transcript-based summary immediately, and then updates the record if final AI summary generation completes.
+- Final AI summary generation can continue after the Chat screen closes, but it writes back only if the saved session record still exists.
+- Summary generation is guarded so stale async results are ignored after a new connection starts, history is cleared, or the target session record has been removed.
 - Backend diagnostics smoke-check `/summary` and `/summary/incremental` response shape when backend services are running.
 - Summary quality control is not part of the current implementation scope.
 - No raw audio, LiveKit token, API key, or API secret is stored or logged.
@@ -398,15 +539,36 @@ Feature priorities and non-goals are documented in `docs/feature-scope.md`.
 - Xcode `AITutor` scheme 构建应成功。
 - iOS 单元测试应通过 `AITutor` scheme。
 - `RUNBOOK.md` 已存在，并覆盖常见启动、网络、agent、音频、转写、摘要和后台模式问题。
-- 真机点击 `Connect` 能创建房间并连接 LiveKit。
-- `Connect` 阶段保持安静；`Start Session` 会请求麦克风权限、发布音频、发送开始信号，然后 tutor 才开始说话。
-- `Start Session` 会输出 `[test]` audio/LiveKit 日志。
+- 真机进入 `AI Chat` 会创建房间并连接 LiveKit。
+- 全新空聊天自动连接后会有一句简短 warm-up；带上下文继续学习时会保持安静。点击麦克风会请求麦克风权限并发布音频，录音时输入框位置显示音波，点击发送结束语音输入后 tutor 再回应。
+- 语音/文字输入会输出 `[test]` audio/LiveKit/session 日志。
 - 活跃语音会话已声明 iOS 后台音频支持；验证方式是开始会话后锁屏或切到其他 App，确认还能说话/听到 tutor，检查前后台、音频中断、路由变化和 LiveKit `[test]` 日志，回到前台后再结束会话。
+- 长按 Chat 麦克风按钮可在 `Auto Voice` 和 `Manual Voice` 间切换。`Auto Voice` 是默认模式：当前活跃且已连接的 Chat 可在后台挂起前打开麦克风；如果麦克风权限已授权，LiveKit STT/turn detection 会自动提交语音，不需要前台点击发送。离开 Chat 或结束会话后，Auto Voice 不会继续在后台生效。
 - 后台支持刻意限定为活跃音频会话。如果 iOS 暂停或杀掉 App，需要重新打开并使用 `Reconnect`；这个 demo 不声明无限后台执行能力。
 - 失败后显示 `Reconnect`，并优先重试当前会话。
-- 活跃会话中，AI Summary Draft 面板会在累计几轮 final transcript 后更新。
-- `End Session` 会断开连接、释放音频、立即保存本地 transcript 摘要，并在最终 AI 摘要完成后更新本地记录。
-- 摘要生成有保护逻辑：开始新连接、清空历史，或目标 session 不再是当前可写对象后，旧的异步摘要结果会被忽略。
+- 如果当前 room 重连失败，App 会 fallback 到新的后端 `/session`，并保留本地聊天消息。
+- 活跃会话中，累计几轮 final transcript 后，打开 Summary 页面会显示最新可用的摘要草稿。
+- History 的 `Continue` 会使用已保存的学习配置开启新 room，在 Chat 中恢复已保存文本消息；如果旧记录没有 messages，则回退到 transcript/summary，并附带来自 summary/transcript 的有限继续学习上下文。
+- History Continue 保持原本地记录 id；没有新内容就退出会被视为只读复盘，有新语音/文字时会更新同一条记录，而不是新增重复列表项。
+- 返回或 `End Session` 会断开连接、释放音频、立即保存本地 transcript 摘要，并在最终 AI 摘要完成后更新本地记录。
+- 最终 AI 摘要可以在 Chat 页面关闭后继续生成，但只有本地 session record 仍存在时才会写回。
+- 摘要生成有保护逻辑：开始新连接、清空历史，或目标 session record 已被移除后，旧的异步摘要结果会被忽略。
 - 后端服务运行时，诊断脚本会 smoke-check `/summary` 和 `/summary/incremental` 响应结构。
 - 摘要质量控制不属于当前实现范围。
 - 不保存或输出原始音频、LiveKit token、API key 或 API secret。
+
+## Known Limitations
+
+- `smooth` prioritizes clear full sentences over lowest latency, so the tutor may wait before speaking.
+- Words Practice is intentionally focused on target-word speaking sessions, not a full vocabulary curriculum.
+- Summary quality control is not implemented; current summaries focus on a privacy-safe local/AI generation path.
+- Backend URL and voice profile are configured by scripts/env, not edited inside the app.
+- Background mode is scoped to active Chat audio sessions and does not claim unlimited background execution; `Auto Voice` requires microphone permission to be granted before entering background.
+
+中文：
+已知限制：
+- `smooth` 优先保证完整清晰，因此 tutor 可能更晚开口；
+- Words Practice 聚焦目标词口语会话，不做完整单词课程体系；
+- 摘要质量控制未实现，当前重点是隐私安全的本地/AI 生成路径；
+- 后端 URL 和 voice profile 由脚本/env 配置，不在 App 内编辑；
+- 后台模式只覆盖活跃 Chat 音频会话，不声明无限后台执行；`Auto Voice` 需要先在前台获得麦克风权限。

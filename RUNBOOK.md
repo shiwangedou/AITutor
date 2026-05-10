@@ -10,7 +10,7 @@ This runbook is the first place to check when the demo does not start, the iPhon
 
 ## Golden Path
 
-1. Fill root `env` from `env.example`.
+1. Copy root `.env.example` to `.env` and fill LiveKit values.
 2. Run `./start_all.sh` from the repository root.
 3. Wait for `Backend API ready`, `Agent registered worker`, and `All backend services ready`.
 4. Run `./check_backend.sh` in another terminal.
@@ -19,7 +19,7 @@ This runbook is the first place to check when the demo does not start, the iPhon
 7. If audio quality is being checked, run `./check_audio_health.sh` after a 3-5 turn session.
 
 中文：
-1. 用根目录 `env.example` 配置 `env`。
+1. 将根目录 `.env.example` 复制为 `.env` 并填写 LiveKit 配置。
 2. 在仓库根目录运行 `./start_all.sh`。
 3. 等待看到 `Backend API ready`、`Agent registered worker`、`All backend services ready`。
 4. 另开终端运行 `./check_backend.sh`。
@@ -81,7 +81,7 @@ Symptoms:
 - LiveKit room has user but no tutor
 
 Checks:
-1. Confirm `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` are set in root `env`.
+1. Confirm `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` are set in root `.env`.
 2. Confirm `LIVEKIT_URL` starts with `wss://`.
 3. Confirm the API key and secret belong to the same LiveKit project as the iOS app.
 4. Check `logs/agent.log` for import errors, authentication errors, or model download errors.
@@ -94,7 +94,7 @@ Checks:
 - LiveKit 房间里有用户但没有 tutor
 
 检查：
-1. 确认根目录 `env` 设置了 `LIVEKIT_URL`、`LIVEKIT_API_KEY`、`LIVEKIT_API_SECRET`。
+1. 确认根目录 `.env` 设置了 `LIVEKIT_URL`、`LIVEKIT_API_KEY`、`LIVEKIT_API_SECRET`。
 2. 确认 `LIVEKIT_URL` 以 `wss://` 开头。
 3. 确认 API key 和 secret 属于 iOS App 使用的同一个 LiveKit project。
 4. 查看 `logs/agent.log` 是否有 import、认证或模型下载错误。

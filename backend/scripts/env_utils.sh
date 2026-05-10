@@ -6,8 +6,7 @@ sync_visible_env() {
   local visible_env="$root_dir/env"
   local dot_env="$root_dir/.env"
 
-  if [[ -f "$visible_env" ]]; then
-    cp "$visible_env" "$dot_env"
+  apply_voice_profile_override() {
     if [[ -n "${VOICE_PIPELINE_PROFILE:-}" ]]; then
       if grep -q '^VOICE_PIPELINE_PROFILE=' "$dot_env"; then
         sed -i.bak "s/^VOICE_PIPELINE_PROFILE=.*/VOICE_PIPELINE_PROFILE=$VOICE_PIPELINE_PROFILE/" "$dot_env"
@@ -16,15 +15,21 @@ sync_visible_env() {
         printf '\nVOICE_PIPELINE_PROFILE=%s\n' "$VOICE_PIPELINE_PROFILE" >> "$dot_env"
       fi
     fi
-    printf '[%s] Synced root env -> .env\n' "$label"
-    return 0
-  fi
+  }
 
   if [[ -f "$dot_env" ]]; then
+    apply_voice_profile_override
     printf '[%s] Using existing root .env\n' "$label"
     return 0
   fi
 
-  printf '[%s] ERROR: missing root env and .env. Fill root env or copy env.example first.\n' "$label"
+  if [[ -f "$visible_env" ]]; then
+    cp "$visible_env" "$dot_env"
+    apply_voice_profile_override
+    printf '[%s] Synced root env -> .env\n' "$label"
+    return 0
+  fi
+
+  printf '[%s] ERROR: missing root .env and env. Copy .env.example to .env first.\n' "$label"
   return 1
 }

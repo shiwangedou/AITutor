@@ -1,184 +1,132 @@
 # Feature Scope and Priorities
 
-This document defines what AITutor should build first, what should come later, and what is intentionally out of scope.
+This document defines the V1 scope for AITutor: complete AI Chat learning loop first, product direction second, and no over-engineering.
 
-中文：
-本文档定义 AITutor 应该优先实现什么、后续增强什么，以及明确不做什么。
+中文：本文档定义 AITutor V1 范围：先完成 AI Chat 学习闭环，再展示产品方向，避免过度工程化。
 
-## P0: Must-Have
+## V1 Core Business Chain
 
-These items are required for a working submission.
+`Home -> Learning Profile -> AI Chat -> voice/text practice -> End Session -> local summary -> History review`
 
-中文：这些是可运行提交的基础要求。
+中文：V1 核心业务链路是 `首页 -> 学习配置 -> AI Chat -> 语音/文字练习 -> 结束会话 -> 本地摘要 -> 历史复盘`。
+
+## P0: Must-Have Working Demo
 
 1. Backend `.env` config loading
-- All secrets and runtime config must be loaded from the root `.env`.
+- All secrets and runtime config load from root `.env`.
+- If `.env` is missing, scripts may create it from the committed placeholder `env`, but existing `.env` always wins to avoid overwriting local secrets.
 - Required values include `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET`.
 
-2. Backend health check
-- Provide `GET /health` so local development and reviewers can verify that the backend is running.
+2. Backend health/session APIs
+- `GET /health`
+- `GET /config`
+- `POST /session`
+- `/session` returns `livekit_url`, `token`, `room_name`, `participant_identity`, `tutor_subject`, and normalized `learning_profile`.
 
-3. Backend session creation API
-- Provide `POST /session`.
-- Return `livekit_url`, `token`, `room_name`, `participant_identity`, and `tutor_subject`.
+3. Learning profile affects tutor prompt
+- iOS sends learning mode, tutor style, difficulty, and optional custom goal.
+- Backend normalizes and stores the profile by room name.
+- Agent loads the profile and injects it into the tutor prompt.
 
-4. LiveKit token generation
-- Use LiveKit API key and secret to issue a room-scoped participant token.
+4. iOS Home and AI Chat
+- Home shows product tagline, current profile, AI Chat, focused Words Practice, Custom Goal/Customize, latest summary, History, Diagnostics, Settings.
+- AI Chat auto-connects; fresh empty chats get one short tutor warm-up, while History Continue and resume-context reconnects stay quiet until learner input.
 
-5. iOS session fetch
-- UIKit app calls backend `/session` through `BackendClient`.
+5. Voice and text interaction
+- Tap-to-record voice input with waveform feedback, explicit cancel, and send-to-finish.
+- Auto/Manual Voice mode selection from the Chat microphone button.
+- Text fallback.
+- Visible connection/audio/tutor states.
+- Reconnect and End Session.
 
-6. iOS LiveKit room connection
-- `LiveKitService` connects to the room using backend-provided `livekit_url` and `token`.
+6. LiveKit integration
+- iOS connects to the LiveKit room using backend config.
+- iOS publishes microphone audio.
+- Agent joins the same project/room and responds by voice.
 
-7. Microphone permission handling
-- Request microphone permission.
-- Show a clear user-facing message when permission is denied or restricted.
+7. Local transcript and summary storage
+- Store text transcript, messages, metadata, learning profile, local summary, and optional AI summary state.
+- Keep latest 20 sessions.
+- Never store raw audio.
 
-8. Microphone audio publishing
-- After connection, publish local microphone audio to the LiveKit room.
+8. Required documentation
+- `README.md`
+- `.env.example`
+- `plan.md`
+- `workflow.md`
+- `RUNBOOK.md`
+- feature-level `FEATURE.md` files
 
-9. Tutor agent joins the same room
-- Backend or agent process joins the room and behaves as an English-speaking tutor.
+中文：P0 是必须可演示的基础：后端配置/接口、学习配置影响 prompt、首页和 AI Chat、语音/文字输入、LiveKit 连接、本地 transcript/summary 存储和完整文档。
 
-10. Minimal realtime tutoring loop
-- User speaks.
-- Tutor responds by voice.
-- At least one full question-and-answer loop works end to end.
+## P1: Demo Quality
 
-11. UIKit session screen
-- Provide `Connect`, `Start Session`, and `End Session`.
-- Show visible session state.
+1. Learning Profile editor
+- Modes: `Daily Conversation`, `Interview English`, `Travel English`, `Pronunciation Practice`.
+- Styles: `Gentle Coach`, `Direct Coach`, `Challenge Coach`.
+- Difficulty: `Beginner`, `Intermediate`, `Advanced`.
+- Custom goal with length limit.
 
-12. Session state machine
-- Minimum states: `idle`, `connecting`, `connected`, `inSession`, `failed`, `ended`.
+2. Chat-style transcript
+- Messages: user, tutor, system.
+- Status: sending, sent, failed, transcribing, streaming.
+- Text fallback should show immediately even if voice transcription is unavailable.
 
-13. Basic error UX
-- Show visible errors for network failure, token failure, LiveKit connection failure, and microphone permission failure.
+3. History and review
+- Show latest 20 sessions.
+- Detail page shows summary and transcript.
+- Continue this goal starts a new session with the same profile plus short previous-session context.
 
-14. Session cleanup
-- `End Session` disconnects LiveKit and deactivates audio.
-- User can start a new session afterward.
+4. Diagnostics and Settings
+- Diagnostics shows safe runtime info and no secrets.
+- Settings shows config/privacy, Clear History, and Reset Learning Profile.
 
-15. Required documentation
-- Keep `README.md`, `.env.example`, `plan.md`, and `workflow.md` complete and aligned with the real implementation.
+5. Summary flow
+- Save local fallback summary immediately at End Session.
+- Incremental AI summary draft can update during longer sessions.
+- Final AI summary can update asynchronously.
+- Local summary remains valid if AI summary fails.
 
-## P1: Strongly Recommended
+6. Tests and runbook
+- iOS unit tests for ViewModel, DTO, state mapping, and storage.
+- Runbook covers startup, networking, audio, transcript, summary, and background recovery.
 
-These items make the project feel more complete without changing the core architecture.
+中文：P1 提升 demo 完整度：学习配置编辑、聊天式转写、历史复盘、诊断/设置、摘要链路、单元测试和运行手册。
 
-中文：这些功能能明显提升完整度，但不改变核心架构。
+## P2: Bonus / Later
 
-1. English tutor prompt policy
-- Keep replies short.
-- Give encouraging correction.
-- Correct one major issue at a time.
-- End with one follow-up question.
+1. Background-mode polish beyond the current active Chat audio scope.
+2. Voice activity indicator.
+3. Session timer or speaking timer.
+4. More robust LiveKit transcription fallback using text streams if needed.
+5. Summary quality control and scoring rubric.
+6. Backend pytest/CI.
+7. More polished visual design.
+8. Full vocabulary curriculum beyond focused target-word sessions.
+9. Long-term study plan or curriculum.
 
-2. Transcription or event log panel
-- Show recent user/tutor messages or connection events.
-- Make the demo observable even when voice output is hard to inspect.
+中文：P2 是后续加分：当前活跃 Chat 音频范围之外的后台 polish、语音活动指示、计时器、转写 fallback、摘要质量控制、后端测试/CI、视觉 polish、完整单词课程体系和长期学习计划。
 
-3. Reconnect entry point
-- Show `Reconnect` after disconnect.
-- Allow the user to recreate or recover a session.
+## Non-Goals for V1
 
-4. Local session storage
-- Store recent session summaries locally.
-- Do not store raw audio.
-- Recommended storage: `Codable` plus JSON file.
+1. Login or account system.
+2. Cloud database or sync.
+3. Full vocabulary curriculum.
+4. Full curriculum system.
+5. Long-term learning plan.
+6. Complex learning report.
+7. Payment or membership.
+8. Multi-language localization.
+9. Raw audio storage.
+10. Admin dashboard.
+11. Custom STT/TTS/LLM pipeline.
+12. Core Data as first storage layer.
+13. Heavy analytics or tracking SDK.
 
-5. Basic post-session summary
-- Save structured feedback after the session.
-- Suggested fields: fluency, grammar, vocabulary, pronunciation, and next practice goal.
-
-6. Privacy note
-- README should explain that raw audio is not persisted.
-- Session summaries are local and can be cleared.
-
-7. Feature-level documentation coverage
-- Add `FEATURE.md` for major feature/service folders.
-- Recommended folders: `Session`, `LiveKit`, `Audio`, and `Storage`.
-
-8. Runbook
-- Add `RUNBOOK.md`.
-- Cover token failure, connection failure, microphone silence, and agent non-response.
-
-## P2: Bonus
-
-These items are useful after P0 and P1 are stable.
-
-中文：这些属于核心稳定后的加分项。
-
-1. Session history screen
-- Show the latest 20 sessions.
-- Include date, duration, topic, and summary.
-
-2. Clear history
-- Provide a local delete action for saved session records.
-
-3. Practice mode selection
-- Example modes: `Daily Conversation`, `Interview English`, `Travel English`.
-- Implement as prompt variants first.
-
-4. More detailed error categories
-- Distinguish backend error, auth error, timeout, LiveKit disconnect, and audio route issue.
-
-5. Background and foreground recovery
-- Keep state coherent when the app moves between background and foreground.
-- Current support enables iOS `audio` background mode for active voice sessions, logs foreground/background, interruption, route-change, and LiveKit connection diagnostics, and enables `Reconnect` after foreground return; full recovery behavior still needs physical-device validation.
-
-中文：当前已启用 iOS `audio` 后台模式，用于活跃语音会话，并记录前后台、音频中断、路由变化和 LiveKit 连接诊断；回前台后会启用 `Reconnect`；完整前后台恢复行为仍需要真机验证。
-
-6. Backend tests
-- Cover `/health`, `/session`, and missing config behavior.
-
-7. iOS state machine tests
-- Cover success, failure, and end-session paths.
-
-8. CI
-- Run backend tests, Python lint, and basic required-file checks.
-
-## P3: Optional Enhancements
-
-These can polish the product, but they should not delay the voice loop.
-
-中文：这些可以提升体验，但不应阻塞实时语音主链路。
-
-1. More polished UIKit UI
-2. Voice activity indicator
-3. Session timer
-4. User display name input
-5. Latest summary card
-6. Simple settings screen
-
-## Non-Goals
-
-These are intentionally out of scope for this project.
-
-中文：以下内容明确不做，避免范围失控。
-
-1. User registration or login
-2. Cloud database or cloud sync
-3. Complex backend business system
-4. Multi-user social features or multi-party rooms
-5. Payment, subscription, or membership
-6. Admin dashboard
-7. Full curriculum, lesson library, question bank, or long-term learning plan
-8. Raw audio persistence
-9. Complex analytics dashboard
-10. Multi-language localization
-11. Heavy visual effects or landing-page-style packaging
-12. Core Data as the first storage layer
-13. Custom STT, TTS, or LLM pipeline
-14. Complex permission or security system beyond `.env` secrets and basic safety notes
+中文：V1 明确不做登录、云同步、完整单词课程/课程系统、长期计划、复杂报告、支付、多语言、raw audio 存储、后台管理、自定义模型管线、Core Data 和重型 analytics。
 
 ## Recommended Lock
 
-For the first complete version, lock scope to:
+For submission quality, lock the implementation to P0 + P1. P2 should only be added when it does not destabilize the voice loop.
 
-1. All P0 items.
-2. P1 items that directly improve demo quality: tutor prompt policy, reconnect entry, local summary storage, and runbook.
-
-中文：
-第一版建议锁定：全部 P0，以及 P1 中最提升演示质量的部分：tutor prompt 策略、重连入口、本地总结存储、Runbook。
+中文：为了提交质量，实现范围锁定为 P0 + P1。P2 只有在不破坏语音闭环稳定性的情况下再做。

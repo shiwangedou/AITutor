@@ -5,6 +5,10 @@ enum SessionState: String, Codable, Equatable {
     case connecting = "Connecting"
     case connected = "Connected"
     case inSession = "In Session"
+    case listening = "Listening"
+    case tutorThinking = "Tutor Thinking"
+    case tutorSpeaking = "Tutor Speaking"
+    case reconnecting = "Reconnecting"
     case ended = "Ended"
     case backendFailed = "Backend Failed"
     case liveKitFailed = "LiveKit Failed"
@@ -26,7 +30,7 @@ enum SessionState: String, Codable, Equatable {
              .storageFailed,
              .unknownFailed:
             return true
-        case .idle, .connecting, .connected, .inSession, .ended:
+        case .idle, .connecting, .connected, .inSession, .listening, .tutorThinking, .tutorSpeaking, .reconnecting, .ended:
             return false
         }
     }

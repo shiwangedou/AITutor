@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from livekit.agents import inference, llm
 
 from config import load_settings
+from learning_profile import SessionProfileStore, normalize_learning_profile, normalize_resume_context
 from token_service import TokenService
 
 
@@ -26,6 +27,11 @@ def _validate_config() -> None:
 
 class SessionCreateRequest(BaseModel):
     display_name: str = "Learner"
+    learning_mode: str | None = None
+    tutor_style: str | None = None
+    difficulty: str | None = None
+    custom_goal: str | None = None
+    resume_context: dict | None = None
 
 
 class SummaryRequest(BaseModel):
@@ -34,6 +40,7 @@ class SummaryRequest(BaseModel):
     duration_seconds: float
     transcript: str
     running_summary: str | None = None
+    learning_profile: dict | None = None
 
 
 class IncrementalSummaryRequest(BaseModel):
@@ -42,6 +49,7 @@ class IncrementalSummaryRequest(BaseModel):
     previous_summary: str | None = None
     new_turns: list[str]
     finalize: bool = False
+    learning_profile: dict | None = None
 
 
 class SummaryResponse(BaseModel):
@@ -107,6 +115,8 @@ def _fallback_incremental_summary(payload: IncrementalSummaryRequest) -> Summary
 
 def _summary_prompt(payload: SummaryRequest) -> str:
     running_summary = payload.running_summary or "No previous running summary."
+    profile = normalize_learning_profile(payload.learning_profile)
+    custom_goal = profile.custom_goal or "No custom goal."
     return (
         "You are summarizing an English-speaking tutoring session for a mobile app. "
         "Return only valid JSON with these keys: summary, strengths, corrections, next_steps. "
@@ -115,6 +125,10 @@ def _summary_prompt(payload: SummaryRequest) -> str:
         "Do not mention raw audio. Do not invent details not present in the transcript.\n\n"
         f"Session id: {payload.session_id}\n"
         f"Subject: {payload.tutor_subject}\n"
+        f"Learning mode: {profile.learning_mode}\n"
+        f"Tutor style: {profile.tutor_style}\n"
+        f"Difficulty: {profile.difficulty}\n"
+        f"Custom goal: {custom_goal}\n"
         f"Duration seconds: {payload.duration_seconds:.0f}\n"
         f"Existing running summary:\n{running_summary[:2500]}\n\n"
         f"Transcript:\n{payload.transcript[:6000]}"
@@ -125,6 +139,7 @@ def _incremental_summary_prompt(payload: IncrementalSummaryRequest) -> str:
     previous_summary = payload.previous_summary or "No previous summary yet."
     turns = "\n".join(payload.new_turns)
     mode = "finalize the session summary" if payload.finalize else "update the running summary"
+    profile = normalize_learning_profile(payload.learning_profile)
     return (
         "You maintain a concise running summary for an English-speaking tutor session. "
         f"Task: {mode}. "
@@ -133,6 +148,10 @@ def _incremental_summary_prompt(payload: IncrementalSummaryRequest) -> str:
         "Do not repeat long transcript text. Do not mention raw audio.\n\n"
         f"Session id: {payload.session_id}\n"
         f"Subject: {payload.tutor_subject}\n"
+        f"Learning mode: {profile.learning_mode}\n"
+        f"Tutor style: {profile.tutor_style}\n"
+        f"Difficulty: {profile.difficulty}\n"
+        f"Custom goal: {profile.custom_goal or 'No custom goal.'}\n"
         f"Previous summary:\n{previous_summary[:3000]}\n\n"
         f"New turns:\n{turns[:4000]}"
     )
@@ -231,6 +250,8 @@ async def generate_incremental_ai_summary(payload: IncrementalSummaryRequest) ->
 @app.post("/session")
 def create_session(payload: SessionCreateRequest) -> dict:
     _validate_config()
+    learning_profile = normalize_learning_profile(payload.model_dump())
+    resume_context = normalize_resume_context(payload.resume_context)
 
     service = TokenService(
         api_key=settings.livekit_api_key,
@@ -240,10 +261,13 @@ def create_session(payload: SessionCreateRequest) -> dict:
 
     user_id = f"user-{uuid4().hex[:8]}"
     token_bundle = service.create_participant_token(user_id, payload.display_name)
+    SessionProfileStore().save(token_bundle["room_name"], learning_profile, resume_context)
 
     return {
         "livekit_url": settings.livekit_url,
         "tutor_subject": settings.tutor_subject,
+        "learning_profile": learning_profile.to_dict(),
+        "resume_context": resume_context.to_dict(),
         **token_bundle,
     }
 

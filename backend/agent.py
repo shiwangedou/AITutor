@@ -18,6 +18,15 @@ from livekit.agents import (
     room_io,
 )
 from livekit.plugins import silero
+from learning_profile import (
+    LearningProfile,
+    ResumeContext,
+    SessionProfileStore,
+    build_profile_prompt,
+    build_resume_context_prompt,
+    normalize_learning_profile,
+    profile_label,
+)
 
 
 ROOT_ENV = Path(__file__).resolve().parents[1] / ".env"
@@ -261,11 +270,31 @@ def attach_latency_logging(session: AgentSession, diagnostics: "LatencyDiagnosti
         )
 
 
-def build_system_prompt(subject: str) -> str:
-    return build_system_prompt_for_level(subject, level=0)
+def build_system_prompt(subject: str, profile: LearningProfile | None = None) -> str:
+    return build_system_prompt_for_level(subject, level=0, profile=profile)
 
 
-def build_system_prompt_for_level(subject: str, level: int) -> str:
+def build_opening_line(profile: LearningProfile) -> str:
+    if profile.custom_goal:
+        return f"Hi, let's practice your goal. What would you say first?"
+
+    mode_openers = {
+        "daily_conversation": "Hi, I'm ready. What did you do today?",
+        "interview_english": "Hi, let's practice interviews. Tell me about yourself.",
+        "travel_english": "Hi, let's practice travel English. Where are you going?",
+        "pronunciation_practice": "Hi, let's warm up. Say: I had a great day.",
+    }
+    return mode_openers.get(profile.learning_mode, "Hi, I'm ready. What did you do today?")
+
+
+def build_system_prompt_for_level(
+    subject: str,
+    level: int,
+    profile: LearningProfile | None = None,
+    resume_context: ResumeContext | None = None,
+) -> str:
+    profile = profile or normalize_learning_profile()
+    resume_context_prompt = build_resume_context_prompt(resume_context or ResumeContext())
     if level >= 2:
         latency_policy = (
             "Latency guard mode is CRITICAL. "
@@ -293,6 +322,8 @@ def build_system_prompt_for_level(subject: str, level: int) -> str:
     return (
         "You are AITutor, a friendly real-time English speaking coach. "
         f"The lesson focus is {subject}. "
+        f"{build_profile_prompt(profile)} "
+        f"{resume_context_prompt} "
         "Speak clearly at a calm natural pace, like a patient pronunciation coach. "
         "Use short sentences with brief natural pauses. "
         "Avoid long clauses, idioms, and fast explanations. "
@@ -309,11 +340,24 @@ def build_system_prompt_for_level(subject: str, level: int) -> str:
 
 
 class Assistant(Agent):
-    def __init__(self, subject: str, config: VoicePipelineConfig) -> None:
+    def __init__(
+        self,
+        subject: str,
+        config: VoicePipelineConfig,
+        profile: LearningProfile,
+        resume_context: ResumeContext,
+    ) -> None:
         self.subject = subject
         self.config = config
+        self.profile = profile
+        self.resume_context = resume_context
         super().__init__(
-            instructions=build_system_prompt_for_level(subject, level=config.prompt_level),
+            instructions=build_system_prompt_for_level(
+                subject,
+                level=config.prompt_level,
+                profile=profile,
+                resume_context=resume_context,
+            ),
         )
 
     def tts_node(self, text: AsyncIterable[str], model_settings):
@@ -425,6 +469,10 @@ class LatencyDiagnostics:
 @SERVER.rtc_session()
 async def entrypoint(ctx: agents.JobContext) -> None:
     turn_handling = build_runtime_turn_handling(VOICE_CONFIG)
+    room_name = getattr(ctx.room, "name", None)
+    profile_store = SessionProfileStore()
+    learning_profile = profile_store.load(room_name)
+    resume_context = profile_store.load_resume_context(room_name)
     LOGGER.info(
         "[profile] voice_pipeline %s",
         json.dumps(
@@ -443,8 +491,38 @@ async def entrypoint(ctx: agents.JobContext) -> None:
             sort_keys=True,
         ),
     )
+    LOGGER.info(
+        "[profile] learning_profile %s",
+        json.dumps(
+            {
+                "room": room_name,
+                "label": profile_label(learning_profile),
+                **learning_profile.to_dict(),
+            },
+            sort_keys=True,
+        ),
+    )
+    LOGGER.info(
+        "[profile] resume_context %s",
+        json.dumps(
+            {
+                "room": room_name,
+                "has_context": resume_context.has_content,
+                "source_session_id": resume_context.source_session_id,
+                "summary_chars": len(resume_context.summary or ""),
+                "ai_summary_chars": len(resume_context.ai_summary or ""),
+                "transcript_excerpt_chars": len(resume_context.transcript_excerpt or ""),
+            },
+            sort_keys=True,
+        ),
+    )
     session = build_agent_session(VOICE_CONFIG, turn_handling)
-    assistant = Assistant(SUBJECT, config=VOICE_CONFIG)
+    assistant = Assistant(
+        SUBJECT,
+        config=VOICE_CONFIG,
+        profile=learning_profile,
+        resume_context=resume_context,
+    )
     diagnostics = LatencyDiagnostics(config=VOICE_CONFIG)
     attach_latency_logging(session, diagnostics)
 
@@ -455,6 +533,20 @@ async def entrypoint(ctx: agents.JobContext) -> None:
             audio_input=room_io.AudioInputOptions(),
         ),
     )
+    if not resume_context.has_content:
+        opening_line = build_opening_line(learning_profile)
+        LOGGER.info(
+            "[profile] opening_line %s",
+            json.dumps(
+                {
+                    "room": room_name,
+                    "mode": learning_profile.learning_mode,
+                    "chars": len(opening_line),
+                },
+                sort_keys=True,
+            ),
+        )
+        session.say(opening_line, allow_interruptions=False)
 
 
 if __name__ == "__main__":

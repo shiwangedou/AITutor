@@ -3,6 +3,7 @@ import Foundation
 protocol SessionStorageManaging {
     func loadRecentSessions() -> [SessionRecord]
     func save(_ record: SessionRecord) throws
+    func deleteSession(id: String) throws
     func clear() throws
 }
 
@@ -50,6 +51,25 @@ final class SessionStorageManager: SessionStorageManaging {
         }
     }
 
+    func deleteSession(id: String) throws {
+        let records = loadRecentSessions().filter { $0.id != id }
+        do {
+            if records.isEmpty {
+                if fileManager.fileExists(atPath: fileURL.path) {
+                    try fileManager.removeItem(at: fileURL)
+                }
+            } else {
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                let data = try encoder.encode(records)
+                try data.write(to: fileURL, options: [.atomic])
+            }
+            AppLogger.debug("Deleted session record id=\(id) count=\(records.count)", category: .storage)
+        } catch {
+            throw AppError.storageFailed(AppLogger.describe(error))
+        }
+    }
+
     func clear() throws {
         do {
             if fileManager.fileExists(atPath: fileURL.path) {
@@ -59,5 +79,76 @@ final class SessionStorageManager: SessionStorageManaging {
         } catch {
             throw AppError.storageFailed(AppLogger.describe(error))
         }
+    }
+}
+
+protocol LearningProfileStoring {
+    func loadDefaultProfile() -> LearningProfile
+    func saveDefaultProfile(_ profile: LearningProfile)
+    func resetDefaultProfile()
+}
+
+final class LearningProfileStore: LearningProfileStoring {
+    private let userDefaults: UserDefaults
+    private let key = "AITutor.defaultLearningProfile"
+
+    init(userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
+    }
+
+    func loadDefaultProfile() -> LearningProfile {
+        guard let data = userDefaults.data(forKey: key),
+              let profile = try? JSONDecoder().decode(LearningProfile.self, from: data) else {
+            return .default
+        }
+        return profile.normalized()
+    }
+
+    func saveDefaultProfile(_ profile: LearningProfile) {
+        let normalized = profile.normalized()
+        guard let data = try? JSONEncoder().encode(normalized) else { return }
+        userDefaults.set(data, forKey: key)
+    }
+
+    func resetDefaultProfile() {
+        userDefaults.removeObject(forKey: key)
+    }
+}
+
+enum VoiceInputMode: String, Codable, CaseIterable, Equatable {
+    case automatic
+    case manual
+
+    var displayName: String {
+        switch self {
+        case .automatic:
+            return "Auto Voice"
+        case .manual:
+            return "Manual Voice"
+        }
+    }
+}
+
+protocol AppSettingsStoring: AnyObject {
+    var voiceInputMode: VoiceInputMode { get set }
+}
+
+final class AppSettingsStore: AppSettingsStoring {
+    private let userDefaults: UserDefaults
+    private let voiceInputModeKey = "AITutor.voiceInputMode"
+
+    init(userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
+    }
+
+    var voiceInputMode: VoiceInputMode {
+        get {
+            guard let rawValue = userDefaults.string(forKey: voiceInputModeKey),
+                  let mode = VoiceInputMode(rawValue: rawValue) else {
+                return .automatic
+            }
+            return mode
+        }
+        set { userDefaults.set(newValue.rawValue, forKey: voiceInputModeKey) }
     }
 }
