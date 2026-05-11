@@ -67,7 +67,7 @@ final class SessionConfigDTOTests: XCTestCase {
     }
 
     func testResumeContextFromRecordUsesLatestTranscriptLines() {
-        let messages = (1...10).map { index in
+        let messages = (1...45).map { index in
             ChatMessage(
                 id: "m-\(index)",
                 sessionID: "session-1",
@@ -101,6 +101,7 @@ final class SessionConfigDTOTests: XCTestCase {
         XCTAssertEqual(context.aiSummary, "AI summary.")
         let transcriptLines = context.transcriptExcerpt?.components(separatedBy: "\n") ?? []
         XCTAssertFalse(transcriptLines.contains("You: turn 1"))
-        XCTAssertTrue(transcriptLines.contains("Tutor: turn 10"))
+        XCTAssertTrue(transcriptLines.contains("Tutor: turn 44"))
+        XCTAssertTrue(transcriptLines.contains("You: turn 45"))
     }
 }

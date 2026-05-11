@@ -16,10 +16,12 @@ struct SessionViewState: Equatable {
     var messages: [ChatMessage] = []
     var voiceInputMode: VoiceInputMode = .automatic
     var isMicrophoneActive = false
+    var isPreparingMicrophone = false
     var isConnectEnabled = true
     var isStartEnabled = false
     var isEndEnabled = false
     var isReconnectEnabled = false
+    var isReconnectVisible = false
     var isClearHistoryEnabled = false
     var isTextInputEnabled = false
     var isMicEnabled = false

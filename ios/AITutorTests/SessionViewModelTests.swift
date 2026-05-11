@@ -44,9 +44,38 @@ final class SessionViewModelTests: XCTestCase {
         XCTAssertEqual(harness.viewModel.currentState.micButtonTitle, "Cancel voice input")
     }
 
-    func testBackgroundVoiceAutoStartStartsMicrophoneBeforeEnteringBackgroundWhenEnabledAndGranted() async {
+    func testForegroundAutoDoesNotStartMicrophoneBeforeEnteringBackground() async {
         let settings = InMemoryAppSettingsStore()
         settings.voiceInputMode = .automatic
+        let harness = makeHarness(appSettings: settings)
+
+        await harness.viewModel.connect()
+        NotificationCenter.default.post(name: .appSceneWillResignActive, object: nil)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertEqual(harness.audio.configureCallCount, 0)
+        XCTAssertEqual(harness.agent.startMicrophoneCallCount, 0)
+        XCTAssertEqual(harness.viewModel.currentState.sessionState, .connected)
+    }
+
+    func testForegroundAutoStopsActiveMicrophoneBeforeEnteringBackground() async {
+        let settings = InMemoryAppSettingsStore()
+        settings.voiceInputMode = .automatic
+        let harness = makeHarness(appSettings: settings)
+
+        await harness.viewModel.connect()
+        await harness.viewModel.toggleAutomaticVoiceInput()
+        NotificationCenter.default.post(name: .appSceneWillResignActive, object: nil)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertFalse(harness.viewModel.currentState.isMicrophoneActive)
+        XCTAssertEqual(harness.agent.stopMicrophoneCallCount, 1)
+        XCTAssertEqual(harness.viewModel.currentState.sessionState, .connected)
+    }
+
+    func testBackgroundAutoStartsMicrophoneBeforeEnteringBackgroundWhenEnabledAndGranted() async {
+        let settings = InMemoryAppSettingsStore()
+        settings.voiceInputMode = .backgroundAutomatic
         let harness = makeHarness(appSettings: settings)
 
         await harness.viewModel.connect()
@@ -58,9 +87,9 @@ final class SessionViewModelTests: XCTestCase {
         XCTAssertEqual(harness.viewModel.currentState.sessionState, .listening)
     }
 
-    func testBackgroundVoiceAutoStartStillHasDidEnterBackgroundFallback() async {
+    func testBackgroundAutoStillHasDidEnterBackgroundFallback() async {
         let settings = InMemoryAppSettingsStore()
-        settings.voiceInputMode = .automatic
+        settings.voiceInputMode = .backgroundAutomatic
         let harness = makeHarness(appSettings: settings)
 
         await harness.viewModel.connect()
@@ -86,9 +115,9 @@ final class SessionViewModelTests: XCTestCase {
         XCTAssertEqual(harness.viewModel.currentState.sessionState, .connected)
     }
 
-    func testBackgroundVoiceAutoStartKeepsExistingContinuousMicrophoneWithoutRestart() async {
+    func testBackgroundAutoKeepsExistingContinuousMicrophoneWithoutRestart() async {
         let settings = InMemoryAppSettingsStore()
-        settings.voiceInputMode = .automatic
+        settings.voiceInputMode = .backgroundAutomatic
         let harness = makeHarness(appSettings: settings)
 
         await harness.viewModel.connect()
@@ -103,7 +132,7 @@ final class SessionViewModelTests: XCTestCase {
 
     func testBackgroundVoiceAutoStartIsScopedToActiveChatOnly() async {
         let settings = InMemoryAppSettingsStore()
-        settings.voiceInputMode = .automatic
+        settings.voiceInputMode = .backgroundAutomatic
         let harness = makeHarness(appSettings: settings)
 
         await harness.viewModel.connect()

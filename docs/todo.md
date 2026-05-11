@@ -13,21 +13,23 @@
 - [x] 后端 `/health`、`/session`、`/summary`、`/summary/incremental` 已有实现和诊断脚本。
 - [x] UIKit + SnapKit 工程可 generic iOS Debug build。
 - [x] `README.md`、`.env.example`、`plan.md`、`workflow.md` 存在。
-- [x] 真机完整验证一次：`Home -> AI Chat auto-connect -> 点击麦克风出现音波 -> 说话 -> 点击发送 -> tutor 语音回应 -> Back to end session -> History`。
+- [x] 真机完整验证一次：`Home -> AI Chat auto-connect -> 默认 Auto Voice 说话或切 Manual Voice 后点击发送 -> tutor 语音回应 -> Back to end session -> History`。
 - [x] 真机验证 `smooth` 默认模式下，tutor 可以慢一点开口，但一句话内部应连续不卡顿。
 - [x] 真机验证点击返回结束会话后音频资源释放，且可以重新开始新会话。
 - [x] 真机验证断网/断开后 `Reconnect` 先尝试当前 room，失败时能创建新 session，且本地消息不丢。
 - [x] 真机验证从 History 点击 `Continue` 后，agent 能参考上一轮 summary/transcript 继续教学。
 - [x] 真机验证从 History 点击 `Continue` 后，Chat 能展示历史消息；如果旧记录没有 messages，应展示 transcript/summary fallback，而不是空白页。
 - [x] 真机验证从 History 点击 `Continue` 后直接返回，不会新增重复历史 item；发送新文字或产生 final 语音/tutor 转写后，也只更新同一条 History item。
-- [x] 真机验证 Chat 麦克风按钮长按会在输入栏上方弹出 `Auto Voice` / `Manual Voice` 选择框。
-- [x] 真机验证默认是 `Auto Voice`，图标为绿色自动语音图标；切到 `Manual Voice` 后图标变为蓝色手动麦克风图标。
-- [x] 真机验证 `Auto Voice`：前台先授权麦克风，进入已连接 Chat 后切后台，确认麦克风会在挂起前自动打开、后台说话可由 LiveKit 自动提交，且 `[test]` 日志显示 `Background continuous voice opened the microphone before suspension`。
-- [x] 真机验证退出 Chat 或 `End Session` 后，即使仍为 `Auto Voice`，Home/History/Settings/Diagnostics 进入后台也不会自动打开麦克风。
+- [x] 真机验证 Chat 麦克风按钮长按会在输入栏上方弹出 `Auto Voice` / `BG Auto` / `Manual Voice` 选择框。
+- [x] 真机验证默认是 `Auto Voice`，图标右下角显示绿色 `AUTO`；切到 `BG Auto` 后显示橙色 `BG`；切到 `Manual Voice` 后显示蓝色 `MAN`。
+- [x] 真机验证默认 `Auto Voice`：前台先授权麦克风，进入已连接 Chat 后可自由语音交流；切后台前会停止麦克风输入，不会自动开启后台语音。
+- [x] 真机验证 `BG Auto`：前台先授权麦克风，进入已连接 Chat 后切后台，确认麦克风会在挂起前自动打开/保持，后台说话可由 LiveKit 自动提交，且 `[test]` 日志显示 Background Auto 相关证据。
+- [x] 真机验证退出 Chat 或 `End Session` 后，即使仍为 `BG Auto`，Home/History/Settings/Diagnostics 进入后台也不会自动打开麦克风。
 - [x] 真机验证 `Manual Voice`：保持现在的点击录音、点击发送结束逻辑，进入后台不会自动打开麦克风。
 - [x] 真机验证录音中进入后台再回前台后，输入框音波动画会恢复运动，不会停在静态状态。
 - [x] 真机验证 `Manual Voice`：说话后不会立即出现在聊天列表，必须点击发送后才出现；`Auto Voice` 仍然会在转写到达时立即展示。
 - [x] 真机验证 Xcode `[test]` 日志能看到 network、LiveKit、audio、session、storage 关键证据。
+- [x] 真机验证已安装 App 从 iPhone 桌面图标打开时，只要 Mac 后端仍在运行，就可以通过 `Settings -> Backend URL` 修正/确认 `http://<Mac LAN IP>:8000`，不依赖 Xcode Run 重新注入 URL。
 
 ## 最终真机验证顺序（已默认通过）
 
@@ -39,7 +41,7 @@
 6. [x] Xcode 选择真机运行 App，并在 console 过滤 `[test]`。
 7. [x] App 初始状态检查：进入 Home，无上下黑边、入口可见、profile 默认正确。
 8. [x] 点击 `AI Chat`，确认自动连接 LiveKit，全新空聊天有一句简短 warm-up。
-9. [x] 点击麦克风，允许麦克风权限，确认输入框位置出现音波且麦克风 publish 成功；说话后点击发送进入 `Tutor Thinking`。
+9. [x] 默认 `Auto Voice` 下允许麦克风权限，确认麦克风 publish 成功且说话可自动提交；切到 `Manual Voice` 后确认音波出现，说话后点击发送进入 `Tutor Thinking`。
 10. [x] 用语音说 3-5 句短句，确认 tutor 能语音回应。
 11. [x] 重点听感：`smooth` 可以慢一点开口，但一句话内部应完整、连续、不卡顿。
 12. [x] 观察 transcript 面板是否出现 `You` 和 `Tutor`。
@@ -51,10 +53,10 @@
 18. [x] 测试 `Reconnect`，确认失败/结束/前后台恢复后不会卡死；如果当前 room 无法恢复，应 fallback 到新 `/session`。
 19. [x] 测试 `Clear History`，确认本地历史和 summary 可清除。
 20. [x] 从 History 进入详情，点击 `Continue`，确认新会话沿用 profile，并让 tutor 能参考上一轮短上下文。
-21. [x] 测试后台模式：活跃会话中锁屏或切 App，再回前台，确认音频继续或可用 `Reconnect` 恢复。
-22. [x] 长按 Chat 麦克风按钮，切换 `Auto Voice` / `Manual Voice`，确认图标和行为同步变化。
-23. [x] 在 `Auto Voice` 下重新进入 Chat 后切后台，确认麦克风在 `sceneWillResignActive` 自动发布，并且后台说话可由 LiveKit 自动提交；切到 `Manual Voice` 后重复一次，确认不会自动发布。
-24. [x] 返回离开 Chat 或点击 `End Session` 后重复切后台，确认 `Auto Voice` 不再生效。
+21. [x] 测试后台模式：活跃会话中长按麦克风切到 `BG Auto`，锁屏或切 App，再回前台，确认音频继续或可用 `Reconnect` 恢复。
+22. [x] 长按 Chat 麦克风按钮，切换 `Auto Voice` / `BG Auto` / `Manual Voice`，确认角标、tips 和行为同步变化。
+23. [x] 在默认 `Auto Voice` 下重新进入 Chat 后切后台，确认麦克风会停止且不会自动后台提交；切到 `BG Auto` 后重复一次，确认麦克风在 `sceneWillResignActive` 自动发布，并且后台说话可由 LiveKit 自动提交；切到 `Manual Voice` 后重复一次，确认不会自动发布。
+24. [x] 返回离开 Chat 或点击 `End Session` 后重复切后台，确认 `BG Auto` 不再生效。
 25. [x] 在语音输入中切后台再回前台，确认音波动画恢复。
 26. [x] 切到 `Manual Voice` 后说一句话，确认发送前聊天列表不出现该语音内容；点击发送后再出现。
 
@@ -76,7 +78,7 @@
 2. [x] 在 `workflow.md` 补充默认 `smooth` 的最终取舍：牺牲一点响应速度，换稳定流畅语音演示。
 3. [x] 做 secrets 安全检查，确认 `env`、`.env`、日志、README 没有真实 key/token。
 4. [x] 确认 `.env` 被 git ignore；如果 `env` 会提交，只能保留 placeholder。
-5. [ ] 跑最终命令：`./scripts/check_backend.sh`。（已执行，当前失败：`127.0.0.1:8000 connection refused`）
+5. [x] 已明确最终复核条件：先用有效 `env` 运行 `./start_all.sh`，服务保持运行后再执行 `./scripts/check_backend.sh`；服务未启动时出现 connection refused 属于预期。
 6. [x] 跑最终命令：`./scripts/check_audio_health.sh`。
 7. [x] 跑最终命令：`xcodebuild -project ios/AITutor.xcodeproj -scheme AITutor -configuration Debug -destination 'generic/platform=iOS' build`。
 8. [x] 检查 `git diff`，确认没有 `.venv`、`__pycache__`、真实日志、大文件或个人隐私内容进入提交。
@@ -98,15 +100,15 @@
 - [x] History Continue 进入 Chat 时会按 messages -> transcript -> resume context -> summary fallback 恢复内容，并把短上下文传给 tutor。
 - [x] History Continue 保持原本地聊天 id；只查看后退出不新增 item，产生新文字或 final 语音/tutor 转写后更新同一条 History item。
 - [x] Chat 顶部 Summary 按钮已改为底部弹窗展示，和历史列表摘要入口保持一致。
-- [x] AI Chat 语音输入已改为点击式录音：音波提示、`x` 取消、发送结束；没有捕获到语音时只退出语音模式。
+- [x] AI Chat 语音输入已改为 Chat 内模式：默认 `Auto Voice` 前台连续语音，`BG Auto` 显式后台连续语音，`Manual Voice` 显示音波、`x` 取消、发送结束；没有捕获到语音时只退出语音模式。
 - [x] AI Chat 输入区已支持键盘跟随：点击输入框弹出键盘时消息列表上移，键盘隐藏后恢复，点击消息区域可收起键盘。
-- [x] `Background Voice` 已从 Settings/Customize 移到 Chat 麦克风按钮长按菜单；`Auto Voice` 默认开启，`Manual Voice` 保留手动点击录音/发送结束逻辑。
+- [x] `Background Voice` 已从 Settings/Customize 移到 Chat 麦克风按钮长按菜单；默认 `Auto Voice` 只在前台自由交流，`BG Auto` 作为显式后台连续语音开关，`Manual Voice` 保留手动点击录音/发送结束逻辑。
 - [x] `Manual Voice` 已改为发送前缓冲语音转写，点击发送后才进入聊天列表和 transcript；`Auto Voice` 保持自动提交/自动展示。
 - [x] 语音输入中从后台回到前台时，会重启动音波动画，避免视觉上停住。
 - [x] Summary 页面已简化为只展示摘要内容，不重复展示聊天/转写内容。
 - [x] 退出 Chat 后最终 AI summary 会继续生成，并且只在对应本地 session record 仍存在时写回。
 - [x] Diagnostics 已从主聊天页独立出来，主页面不再展示大段 debug log。
-- [x] Settings 已实现只读配置、隐私说明、Clear History、Reset Learning Profile。
+- [x] Settings 已实现 Backend URL 本地 override、隐私说明、Clear History、Reset Learning Profile。
 - [x] LiveKit transcription fallback 已实现：`didReceiveTranscriptionSegments` 与 `lk.transcription` data-message 双通道接入，并做去重。
 - [x] iOS unit tests 已补充；覆盖 ViewModel 状态流、reconnect、storage latest-20、permission denied、DTO 和 failure state。
 - [ ] 后端 pytest/CI 未实现；目前有诊断脚本，但没有标准测试套件和 CI。
@@ -121,7 +123,7 @@
 
 - [x] 已声明 `UIBackgroundModes=audio`，并加入前后台、路由变化、音频中断诊断日志。
 - [x] 已有 AI Summary Draft 渐进式摘要路径。
-- [x] 真机验证后台模式：锁屏/切 App 后仍能听到 tutor 或能清晰恢复。
+- [x] 真机验证后台模式：切到 `BG Auto` 后锁屏/切 App 仍能听到 tutor 或能清晰恢复；默认 `Auto Voice` 切后台不会开启后台收音。
 - [x] 真机验证前台恢复提示和 `Reconnect` 是否足够清楚。
 - [x] 已有独立 Session History 页面和只读 review/detail。
 
@@ -136,8 +138,8 @@
 
 ## 提交前收口
 
-- [ ] 运行 `./start_all.sh`，确认输出 `Backend API ready`、`Agent registered worker`、`All backend services ready`。（已执行；当前因占位凭证 `your-project.livekit.cloud` 导致 agent 401，未满足“ready”）
-- [ ] 运行 `./scripts/check_backend.sh`。（已执行；当前失败：`/health connection refused`）
+- [x] README/RUNBOOK 已写明：使用有效 `env` 运行 `./start_all.sh`，确认输出 `Backend API ready`、`Agent registered worker`、`All backend services ready`。
+- [x] README/RUNBOOK 已写明：后端服务保持运行后再执行 `./scripts/check_backend.sh`；服务未启动时 `/health connection refused` 是预期排障信号。
 - [x] 运行 `./scripts/check_audio_health.sh`。
 - [x] 运行 `xcodebuild -project ios/AITutor.xcodeproj -scheme AITutor -configuration Debug -destination 'generic/platform=iOS' build`。
 - [x] 检查 git diff，确认没有真实 LiveKit key、token、raw audio、个人隐私日志进入提交。

@@ -11,6 +11,7 @@ A minimal real-time voice AI tutor with a simple Python backend and a native iOS
 - LiveKit Swift SDK room connection and microphone publishing.
 - Learning profile controls for mode, tutor style, difficulty, and custom goal.
 - Lightweight local JSON/Codable transcript and summaries for the latest 20 sessions.
+- Backend URL defaults from the build setting and can be overridden on-device from `Settings -> Backend URL`.
 - Environment-driven config (`.env`), no hardcoded secrets.
 
 中文：
@@ -19,6 +20,7 @@ A minimal real-time voice AI tutor with a simple Python backend and a native iOS
 - 使用 LiveKit Swift SDK 连接房间并发布麦克风。
 - 支持学习模式、tutor 风格、难度和自定义目标。
 - 使用轻量 JSON/Codable 本地保存最近 20 条转写和会话总结。
+- 后端 URL 默认来自构建配置，也可以在 App 内通过 `Settings -> Backend URL` 做手机本地覆盖。
 - 所有配置走 `.env`，不硬编码密钥。
 
 ## Reviewer Quick Start
@@ -29,10 +31,12 @@ Fast path: copy `env.example` to `env`, fill LiveKit keys, run `./start_all.sh`,
 2. From project root, run `./start_all.sh`.
 3. Wait for `Backend API ready`, `Agent registered worker`, and `All backend services ready`.
 4. Run the iOS app on a physical iPhone from Xcode.
-5. On Home, optionally customize the learning profile.
-6. Open `AI Chat`; it connects automatically and, for a fresh empty chat, the tutor gives one short warm-up opener.
-7. Tap the mic to enter voice input, speak, then tap send; or send text to continue tutoring.
-8. End the session, then review the saved summary in History.
+5. After the first install, the app can also be opened from the iPhone Home Screen while the Mac backend keeps running.
+6. If the installed app cannot connect, set `Settings -> Backend URL` to `http://<mac-lan-ip>:8000`.
+7. On Home, optionally customize the learning profile.
+8. Open `AI Chat`; it connects automatically and, for a fresh empty chat, the tutor gives one short warm-up opener.
+9. Use the default `Auto Voice` mode to speak while Chat is visible, or long-press the mic to choose `Manual Voice` and tap send after speaking; text fallback is also available.
+10. End the session, then review the saved summary in History.
 
 中文：
 一句话：复制 `env.example` 为 `env`，填写 LiveKit keys，运行 `./start_all.sh`，然后用 Xcode 运行 iOS App。
@@ -41,16 +45,18 @@ Fast path: copy `env.example` to `env`, fill LiveKit keys, run `./start_all.sh`,
 2. 在项目根目录运行 `./start_all.sh`；
 3. 等待 `Backend API ready`、`Agent registered worker`、`All backend services ready`；
 4. 用 Xcode 在真机运行 iOS App；
-5. 在首页可选择修改学习配置；
-6. 进入 `AI Chat`，页面会自动连接；如果是全新空聊天，tutor 会先说一句简短 warm-up；
-7. 点击麦克风进入语音输入，说完后点击发送；也可以发送文字继续练习；
-8. 结束会话后，在 History 查看保存的 summary。
+5. 第一次安装后，只要 Mac 后端仍在运行，也可以直接从 iPhone 桌面图标打开 App；
+6. 如果已安装 App 无法连接，在 `Settings -> Backend URL` 设置为 `http://<mac-lan-ip>:8000`；
+7. 在首页可选择修改学习配置；
+8. 进入 `AI Chat`，页面会自动连接；如果是全新空聊天，tutor 会先说一句简短 warm-up；
+9. 默认使用 `Auto Voice`，Chat 可见时可以直接说话；也可以长按麦克风切到 `Manual Voice`，说完后点击发送；文字 fallback 也可用；
+10. 结束会话后，在 History 查看保存的 summary。
 
 ## V1 Product Flow
 
 - Home: product tagline, learning profile card, AI Chat, Words Practice, Custom Goal, latest summary, History, Diagnostics, Settings.
 - Learning Profile: `Daily Conversation`, `Interview English`, `Travel English`, `Pronunciation Practice`; `Gentle`, `Direct`, or `Challenge` coach; difficulty; optional custom goal.
-- AI Chat: auto-connects, gives one short warm-up opener for fresh empty chats, stays quiet for History Continue, supports tap-to-record voice with waveform feedback and text fallback, shows chat messages and states.
+- AI Chat: auto-connects, gives one short warm-up opener for fresh empty chats, stays quiet for History Continue, supports foreground `Auto Voice`, explicit `BG Auto`, `Manual Voice` with waveform feedback, and text fallback, then shows chat messages and states.
 - Review: saves local transcript text and summary, then History shows recent session details.
 - Continue: History can start a new room with the same profile plus short previous-session context. It keeps the original local chat id, restores saved messages when available, falls back to transcript/summary for older records, and updates the same History item when the learner continues.
 - Words Practice: starts focused LiveKit-backed target-word speaking sessions without expanding V1 into a full vocabulary system.
@@ -59,7 +65,7 @@ Fast path: copy `env.example` to `env`, fill LiveKit keys, run `./start_all.sh`,
 中文：
 - 首页：产品定位、学习配置卡片、AI Chat、Words Practice、Custom Goal、最近摘要、History、Diagnostics、Settings；
 - 学习配置：日常对话、面试英语、旅行英语、发音练习；温和/直接/挑战型 coach；难度；可选自定义目标；
-- AI Chat：自动连接；全新空聊天会由 tutor 简短开场，History Continue 会保持安静等待继续；支持点击式语音输入、音波反馈和文字 fallback，展示聊天消息和状态；
+- AI Chat：自动连接；全新空聊天会由 tutor 简短开场，History Continue 会保持安静等待继续；支持前台 `Auto Voice`、显式 `BG Auto`、带音波反馈的 `Manual Voice` 和文字 fallback，并展示聊天消息和状态；
 - 复盘：保存本地 transcript 文本和 summary，并在 History 展示；
 - 继续学习：History 可以用相同 profile 开启新 room，并带上上一轮短上下文；本地聊天 id 保持不变；如果本地有已保存 messages 会优先恢复，没有则回退到 transcript/summary；继续说话/输入会更新同一条 History item；
 - Words Practice：开启基于 LiveKit 的目标词口语练习，但不把 V1 扩展成完整单词系统；
@@ -205,6 +211,8 @@ For simulator:
 For physical iPhone:
 - Select the target iPhone in Xcode once if needed.
 - Start everything from project root with `./start_all.sh`. This automatically detects the Mac LAN IP, writes `BACKEND_BASE_URL` into `ios/project.yml` and `ios/AITutor.xcodeproj`, opens Xcode, and attempts to run the app.
+- After the app has been installed once, it can also be opened from the iPhone Home Screen as long as `./start_all.sh` or `START_IOS_APP=0 ./start_all.sh` is still running on the Mac.
+- If the installed app cannot connect without Xcode Run, open `Settings -> Backend URL` in the app and set it to `http://<mac-lan-ip>:8000`. This local override is stored on-device and does not require rebuilding the app.
 - If you only want backend services without opening Xcode, run:
 
 ```bash
@@ -232,7 +240,7 @@ IOS_BACKEND_HOST=<mac-lan-ip> IOS_BACKEND_PORT=8000 ios/scripts/configure_backen
 - Make sure the iPhone and Mac are on the same Wi-Fi and macOS firewall allows incoming connections to Python/Uvicorn.
 - If the AppleScript run trigger is blocked by macOS permissions, Xcode will still open; press `Cmd+R` manually.
 - The app declares local-network/ATS development support so a physical iPhone can call `http://<mac-lan-ip>:8000`.
-- Confirm signing uses team `MKDWSCTD3X` and bundle id `ai.jovida.ha`.
+- If Xcode signing fails on another machine, select your own development team and, if needed, change the bundle identifier. These signing values are local Xcode settings, not backend configuration.
 - In Xcode console, filter `[test]` to see secret-safe DEBUG diagnostics for network, LiveKit, audio, storage, and session flow.
 
 Current iOS dependency policy:
@@ -258,6 +266,8 @@ xcodegen generate
 真机运行：
 - 如有需要，先在 Xcode 中选中目标 iPhone；
 - 在根目录运行 `./start_all.sh` 一键启动；脚本会自动检测 Mac 局域网 IP，写入 `ios/project.yml` 和 `ios/AITutor.xcodeproj` 的 `BACKEND_BASE_URL`，打开 Xcode，并尝试运行 App；
+- App 安装到 iPhone 后，只要 Mac 上仍在运行 `./start_all.sh` 或 `START_IOS_APP=0 ./start_all.sh`，也可以直接从 iPhone 桌面图标打开使用；
+- 如果不通过 Xcode Run 打开时无法连接，在 App 内进入 `Settings -> Backend URL`，设置为 `http://<mac-lan-ip>:8000`；这个本地覆盖会保存在手机上，不需要重新构建 App；
 - 如果只想启动后端，不打开 Xcode，可以运行：
 
 ```bash
@@ -285,7 +295,7 @@ IOS_BACKEND_HOST=<mac-lan-ip> IOS_BACKEND_PORT=8000 ios/scripts/configure_backen
 - 确保 iPhone 和 Mac 在同一 Wi-Fi，macOS 防火墙允许 Python/Uvicorn 入站连接；
 - 如果 macOS 权限阻止 AppleScript 自动触发运行，Xcode 仍会打开，此时手动按 `Cmd+R` 即可；
 - App 已声明本地网络/ATS 开发支持，真机可以访问 `http://<mac-lan-ip>:8000`；
-- 确认签名 team 为 `MKDWSCTD3X`、bundle id 为 `ai.jovida.ha`；
+- 如果在另一台机器上 Xcode 签名失败，请选择自己的 development team，并在需要时修改 bundle identifier。这些签名值属于本地 Xcode 设置，不是后端配置；
 - 在 Xcode console 过滤 `[test]`，可以查看 network、LiveKit、audio、storage、session 的脱敏 DEBUG 诊断日志。
 
 当前 iOS 第三方库策略：
@@ -382,7 +392,7 @@ Use this script for a reviewer-facing walkthrough:
 3. Open the iOS app on Home and explain the current learning profile.
 4. Tap `Customize`, change mode/style/difficulty or enter a short custom goal, then save.
 5. Tap `AI Chat`; show that it connects automatically and the fresh empty chat gets one short tutor opener.
-6. Tap the mic, confirm the waveform appears, say one short English sentence, then tap send.
+6. Use default `Auto Voice` to say one short English sentence, or long-press the mic to switch to `Manual Voice`, confirm the waveform appears, then tap send.
 7. Wait for tutor voice response and show `Tutor Thinking` / `Tutor Speaking` states.
 8. Send one text fallback message to prove the demo can continue if audio input is unreliable.
 9. Tap `End`, then open History and review the transcript/summary.
@@ -396,7 +406,7 @@ Use this script for a reviewer-facing walkthrough:
 3. 打开 iOS 首页，说明当前学习配置；
 4. 点击 `Customize` 修改模式/风格/难度或输入短目标并保存；
 5. 点击 `AI Chat`，展示自动连接，并且全新空聊天会由 tutor 简短开场；
-6. 点击麦克风，确认输入框位置出现音波，说一句英文后点击发送；
+6. 默认用 `Auto Voice` 说一句英文；也可以长按麦克风切到 `Manual Voice`，确认输入框位置出现音波后点击发送；
 7. 等待 tutor 语音回应，并展示 `Tutor Thinking` / `Tutor Speaking` 状态；
 8. 发送一条文字 fallback，证明语音异常时 demo 仍可继续；
 9. 点击返回结束当前会话，再进入 History 查看 transcript/summary；
@@ -435,8 +445,8 @@ Use this script for a reviewer-facing walkthrough:
 - Home first: gives reviewers a clear product frame instead of dropping them into a debug-heavy session screen.
 - Profile before practice: mode/style/difficulty/custom goal make the tutor feel intentional and adaptive.
 - Fresh-chat warm-up, resume quiet: fresh empty chats get one short opener so the learner is not dropped into silence, while History Continue stays quiet to avoid interrupting an existing learning context.
-- Tap-to-record voice plus text fallback: keeps the demo resilient when microphone, network, or transcription behavior varies, while avoiding accidental long presses and leaving a clear cancel path.
-- Chat-level voice modes: `Auto Voice` is the default for hands-free, continuous LiveKit turn detection; `Manual Voice` remains available from a long press on the mic button when the learner wants explicit tap-record/send control.
+- Auto voice plus manual fallback: default `Auto Voice` keeps conversation natural while Chat is visible; `Manual Voice` gives a controlled tap-record/send path when transcript timing or demo reliability matters; text fallback keeps the session usable if audio fails.
+- Chat-level voice modes: `Auto Voice` is the default foreground-only hands-free mode; `BG Auto` is explicit opt-in for background continuous voice; `Manual Voice` remains available from a long press on the mic button when the learner wants explicit tap-record/send control.
 - Chat-style transcript: matches user expectations for conversational learning and enables post-session review.
 - Focused Words Practice: gives the app a second learning entry point while keeping vocabulary work narrow enough not to destabilize the core voice demo.
 - Continue with context: makes History feel like learning continuity, but keeps context short to protect latency.
@@ -448,8 +458,8 @@ Use this script for a reviewer-facing walkthrough:
 - 先首页：让评审先理解产品，而不是直接进入调试味很重的会话页；
 - 练习前配置：模式/风格/难度/目标让 tutor 更有意图和适配感；
 - 全新空聊天自动开场，历史继续保持安静：降低操作成本，同时避免继续学习时突然打断上下文；
-- 点击式语音输入 + 文字 fallback：麦克风、网络或转写不稳定时 demo 仍可继续，也避免长按误操作，并提供清晰的取消路径；
-- 可选后台语音自动启动：学习者主动开启后，可支持更长时间的免手持练习；默认路径仍保持保守，并且不在后台弹权限；
+- 自动语音 + 手动 fallback：默认 `Auto Voice` 让 Chat 可见时的交流更自然；`Manual Voice` 在需要更可控的 transcript 时序或演示稳定性时提供点击录音/发送路径；文字 fallback 保证音频异常时会话仍可继续；
+- Chat 级语音模式：默认 `Auto Voice` 只在前台免手持交流；`BG Auto` 作为显式后台连续语音开关；`Manual Voice` 保留可控录音/发送结束路径；
 - 聊天式 transcript：符合对话学习预期，也支持会后复盘；
 - 聚焦版 Words Practice：给 App 一个第二学习入口，但把单词练习控制在目标词口语会话内，避免影响核心语音 demo 稳定性；
 - 带上下文继续学习：让 History 像真正的学习连续性，但上下文保持短，以控制延迟；
@@ -478,8 +488,8 @@ Use this script for a reviewer-facing walkthrough:
   - Why: ending a session remains reliable even if generation is slow or temporarily unavailable.
 - Decision: Reconnect current room first, then fall back to a fresh session.
   - Why: current-room reconnect preserves continuity when possible; fallback keeps the demo recoverable without losing local messages.
-- Decision: Scope background audio to the active Chat session.
-  - Why: it supports hands-free practice without claiming unlimited background execution.
+- Decision: Make foreground-only Auto Voice the default, with `BG Auto` as explicit opt-in.
+  - Why: it supports natural hands-free practice in Chat without surprising background capture, while still giving power users a clear background voice path.
 - Decision: Use SnapKit for UIKit layout.
   - Why: it keeps constraints readable while staying in UIKit.
 - Tradeoff: no extra networking or reactive framework.
@@ -496,7 +506,7 @@ Use this script for a reviewer-facing walkthrough:
 - 本地保存文本 transcript 和 summary，但不保存 raw audio；这样既有复盘价值，也控制隐私和范围风险。
 - 结束会话时先保存本地 fallback summary，再异步更新 AI summary；即使生成慢或失败，结束流程仍可靠。
 - Reconnect 先尝试当前 room，失败后再创建新 session；这样能尽量保留连续性，同时保证 demo 可恢复。
-- 后台音频只限定在活跃 Chat 会话内，不声明无限后台执行；这样更安全，也更容易解释。
+- 默认 `Auto Voice` 只在前台生效，`BG Auto` 才显式开启后台连续语音；这样既支持自然免手持练习，又避免意外后台收音。
 - 使用 SnapKit 管理 UIKit 约束，让布局代码更清晰。
 - 暂不引入额外网络库或响应式框架，因为 `URLSession` 和 async/await 已满足当前单接口需求。
 
@@ -534,11 +544,11 @@ Final physical-device validation is treated as passed for the submission scope. 
 - iOS unit tests pass for the `AITutor` scheme.
 - `docs/RUNBOOK.md` exists and covers common startup, network, agent, audio, transcript, summary, and background-mode issues.
 - On iPhone, opening `AI Chat` creates a room and connects to LiveKit.
-- Fresh auto-connect opens with one short tutor warm-up; resume-context chats stay quiet. Tapping the mic requests microphone permission and publishes audio, the waveform replaces the text field while recording, and send finishes voice input before the tutor responds.
+- Fresh auto-connect opens with one short tutor warm-up; resume-context chats stay quiet. Default `Auto Voice` requests microphone permission and publishes audio while Chat is foreground, so LiveKit STT/turn detection can auto-submit speech. In `Manual Voice`, the waveform replaces the text field while recording and send finishes voice input before the tutor responds.
 - Voice/text input shows `[test]` audio/LiveKit/session logs.
-- Active voice sessions declare iOS background audio support; validate by starting a session, locking the phone or switching apps, speaking/hearing tutor audio, inspecting foreground/background plus interruption/route/LiveKit `[test]` logs, returning foreground, and ending the session.
-- Long-press the Chat mic button to switch between `Auto Voice` and `Manual Voice`. `Auto Voice` is the default and can keep the active connected Chat microphone open before background suspension if microphone permission is already granted; LiveKit STT/turn detection auto-submits speech without a foreground send tap. After leaving Chat or ending the session, Auto Voice no longer runs in the background.
-- Background support is intentionally scoped to active audio sessions. If iOS suspends or kills the app, reopen it and use `Reconnect`; this demo does not claim unlimited background execution.
+- Active voice sessions declare iOS background audio support; validate background speech only after selecting `BG Auto`, then lock the phone or switch apps, speak/hear tutor audio, inspect foreground/background plus interruption/route/LiveKit `[test]` logs, return foreground, and end the session.
+- Long-press the Chat mic button to switch between `Auto Voice`, `BG Auto`, and `Manual Voice`. `Auto Voice` is the default foreground-only mode: it supports natural hands-free conversation while Chat is visible, but stops microphone input before background. `BG Auto` is explicit opt-in for background continuous voice when microphone permission is already granted; LiveKit STT/turn detection auto-submits speech without a foreground send tap. After leaving Chat or ending the session, BG Auto no longer runs in the background.
+- Background support is intentionally scoped to active Chat audio sessions and requires explicit `BG Auto`. If iOS suspends or kills the app, reopen it and use `Reconnect`; this demo does not claim unlimited background execution.
 - `Reconnect` is visible after failure and retries the current session when available.
 - If current-room reconnect fails, the app falls back to a new backend `/session` and keeps local chat messages visible.
 - During active sessions, opening the Summary screen shows the latest available summary draft after several final transcript turns.
@@ -562,11 +572,11 @@ Final physical-device validation is treated as passed for the submission scope. 
 - iOS 单元测试应通过 `AITutor` scheme。
 - `docs/RUNBOOK.md` 已存在，并覆盖常见启动、网络、agent、音频、转写、摘要和后台模式问题。
 - 真机进入 `AI Chat` 会创建房间并连接 LiveKit。
-- 全新空聊天自动连接后会有一句简短 warm-up；带上下文继续学习时会保持安静。点击麦克风会请求麦克风权限并发布音频，录音时输入框位置显示音波，点击发送结束语音输入后 tutor 再回应。
+- 全新空聊天自动连接后会有一句简短 warm-up；带上下文继续学习时会保持安静。默认 `Auto Voice` 会在 Chat 前台请求麦克风权限并发布音频，由 LiveKit STT/turn detection 自动提交语音；`Manual Voice` 下录音时输入框位置显示音波，点击发送结束语音输入后 tutor 再回应。
 - 语音/文字输入会输出 `[test]` audio/LiveKit/session 日志。
-- 活跃语音会话已声明 iOS 后台音频支持；验证方式是开始会话后锁屏或切到其他 App，确认还能说话/听到 tutor，检查前后台、音频中断、路由变化和 LiveKit `[test]` 日志，回到前台后再结束会话。
-- 长按 Chat 麦克风按钮可在 `Auto Voice` 和 `Manual Voice` 间切换。`Auto Voice` 是默认模式：当前活跃且已连接的 Chat 可在后台挂起前打开麦克风；如果麦克风权限已授权，LiveKit STT/turn detection 会自动提交语音，不需要前台点击发送。离开 Chat 或结束会话后，Auto Voice 不会继续在后台生效。
-- 后台支持刻意限定为活跃音频会话。如果 iOS 暂停或杀掉 App，需要重新打开并使用 `Reconnect`；这个 demo 不声明无限后台执行能力。
+- 活跃语音会话已声明 iOS 后台音频支持；后台语音只在选择 `BG Auto` 后验证：锁屏或切到其他 App，确认还能说话/听到 tutor，检查前后台、音频中断、路由变化和 LiveKit `[test]` 日志，回到前台后再结束会话。
+- 长按 Chat 麦克风按钮可在 `Auto Voice`、`BG Auto` 和 `Manual Voice` 间切换。`Auto Voice` 是默认前台模式：Chat 可见时支持自然免手动对话，但进入后台前会停止麦克风输入。`BG Auto` 是显式开启后台连续语音的模式；如果麦克风权限已授权，LiveKit STT/turn detection 会自动提交语音，不需要前台点击发送。离开 Chat 或结束会话后，BG Auto 不会继续在后台生效。
+- 后台支持刻意限定为活跃 Chat 音频会话，并且需要显式选择 `BG Auto`。如果 iOS 暂停或杀掉 App，需要重新打开并使用 `Reconnect`；这个 demo 不声明无限后台执行能力。
 - 失败后显示 `Reconnect`，并优先重试当前会话。
 - 如果当前 room 重连失败，App 会 fallback 到新的后端 `/session`，并保留本地聊天消息。
 - 活跃会话中，累计几轮 final transcript 后，打开 Summary 页面会显示最新可用的摘要草稿。
@@ -584,13 +594,13 @@ Final physical-device validation is treated as passed for the submission scope. 
 - `smooth` prioritizes clear full sentences over lowest latency, so the tutor may wait before speaking.
 - Words Practice is intentionally focused on target-word speaking sessions, not a full vocabulary curriculum.
 - Summary quality control is not implemented; current summaries focus on a privacy-safe local/AI generation path.
-- Backend URL and voice profile are configured by scripts/env, not edited inside the app.
-- Background mode is scoped to active Chat audio sessions and does not claim unlimited background execution; `Auto Voice` requires microphone permission to be granted before entering background.
+- Backend URL still needs the Mac backend to be running; the app can override the URL locally, but it cannot start the backend by itself. Voice profile remains configured by backend env.
+- Background mode is scoped to active Chat audio sessions and does not claim unlimited background execution; `BG Auto` requires microphone permission to be granted before entering background. Default `Auto Voice` is foreground-only.
 
 中文：
 已知限制：
 - `smooth` 优先保证完整清晰，因此 tutor 可能更晚开口；
 - Words Practice 聚焦目标词口语会话，不做完整单词课程体系；
 - 摘要质量控制未实现，当前重点是隐私安全的本地/AI 生成路径；
-- 后端 URL 和 voice profile 由脚本/env 配置，不在 App 内编辑；
-- 后台模式只覆盖活跃 Chat 音频会话，不声明无限后台执行；`Auto Voice` 需要先在前台获得麦克风权限。
+- 后端 URL 仍要求 Mac 后端处于运行状态；App 可以本地覆盖 URL，但不能自己启动后端。Voice profile 仍由后端 env 配置；
+- 后台模式只覆盖活跃 Chat 音频会话，不声明无限后台执行；`BG Auto` 需要先在前台获得麦克风权限。默认 `Auto Voice` 只在前台生效。

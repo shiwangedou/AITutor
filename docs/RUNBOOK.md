@@ -15,7 +15,7 @@ This runbook is the first place to check when the demo does not start, the iPhon
 3. Wait for `Backend API ready`, `Agent registered worker`, and `All backend services ready`.
 4. Run `./scripts/check_backend.sh` in another terminal.
 5. Run the iOS app on a physical iPhone from Xcode.
-6. In the app: `Connect -> Start Session -> speak -> wait for tutor voice -> End Session`.
+6. In the app: `Home -> AI Chat -> speak with the mic or send text -> wait for tutor response -> Back or End Session -> History`.
 7. If audio quality is being checked, run `./scripts/check_audio_health.sh` after a 3-5 turn session.
 
 中文：
@@ -24,7 +24,7 @@ This runbook is the first place to check when the demo does not start, the iPhon
 3. 等待看到 `Backend API ready`、`Agent registered worker`、`All backend services ready`。
 4. 另开终端运行 `./scripts/check_backend.sh`。
 5. 用 Xcode 在真机运行 iOS App。
-6. App 内执行：`Connect -> Start Session -> 说话 -> 等待 tutor 语音回应 -> End Session`。
+6. App 内执行：`Home -> AI Chat -> 使用麦克风说话或发送文字 -> 等待 tutor 回应 -> 返回或 End Session -> History`。
 7. 如果要检查语音质量，完成 3-5 轮对话后运行 `./scripts/check_audio_health.sh`。
 
 ## Logs And Diagnostics
@@ -135,9 +135,10 @@ Symptoms:
 Checks:
 1. Confirm iPhone and Mac are on the same Wi-Fi.
 2. Confirm `BACKEND_BASE_URL` is `http://<Mac LAN IP>:8000`, not `127.0.0.1`.
-3. Run `IOS_BACKEND_BASE_URL=http://<Mac LAN IP>:8000 ios/scripts/configure_backend_url.sh` if needed.
-4. Confirm macOS firewall allows incoming Python/Uvicorn connections.
-5. From the Mac, run `curl http://<Mac LAN IP>:8000/health`.
+3. If the app was opened from the iPhone Home Screen and not Xcode Run, open `Settings -> Backend URL` in the app and confirm it points to `http://<Mac LAN IP>:8000`.
+4. Run `IOS_BACKEND_BASE_URL=http://<Mac LAN IP>:8000 ios/scripts/configure_backend_url.sh` if you want to update the bundled build setting for the next Xcode build.
+5. Confirm macOS firewall allows incoming Python/Uvicorn connections.
+6. From the Mac, run `curl http://<Mac LAN IP>:8000/health`.
 
 中文：
 症状：
@@ -148,9 +149,10 @@ Checks:
 检查：
 1. 确认 iPhone 和 Mac 在同一 Wi-Fi。
 2. 确认 `BACKEND_BASE_URL` 是 `http://<Mac 局域网 IP>:8000`，不是 `127.0.0.1`。
-3. 必要时运行 `IOS_BACKEND_BASE_URL=http://<Mac LAN IP>:8000 ios/scripts/configure_backend_url.sh`。
-4. 确认 macOS 防火墙允许 Python/Uvicorn 入站连接。
-5. 在 Mac 上运行 `curl http://<Mac LAN IP>:8000/health`。
+3. 如果是从 iPhone 桌面图标打开，而不是 Xcode Run 打开，请在 App 内进入 `Settings -> Backend URL`，确认它指向 `http://<Mac LAN IP>:8000`。
+4. 如果想更新下一次 Xcode 构建写入的默认值，再运行 `IOS_BACKEND_BASE_URL=http://<Mac LAN IP>:8000 ios/scripts/configure_backend_url.sh`。
+5. 确认 macOS 防火墙允许 Python/Uvicorn 入站连接。
+6. 在 Mac 上运行 `curl http://<Mac LAN IP>:8000/health`。
 
 ## Microphone Or Audio Engine Fails
 
@@ -165,7 +167,7 @@ Checks:
 2. Use a physical iPhone for voice validation; simulator microphone behavior is less reliable.
 3. Watch Xcode `[test]` logs for permission, route, category, mode, sample rate, and publish result.
 4. Disconnect Bluetooth headsets if route behavior looks strange.
-5. Tap `Reconnect`, then `Start Session` again.
+5. Tap `Reconnect`, then use the mic or send a text message again.
 
 中文：
 症状：
@@ -179,28 +181,28 @@ Checks:
 2. 语音验证优先使用真机；模拟器麦克风行为不稳定。
 3. 查看 Xcode `[test]` 日志里的权限、路由、category、mode、sample rate、publish 结果。
 4. 如果音频路由异常，先断开蓝牙耳机。
-5. 点击 `Reconnect`，再点击 `Start Session`。
+5. 点击 `Reconnect`，然后重新使用麦克风或发送一条文字消息。
 
 ## Tutor Speaks Too Early
 
 Expected behavior:
-- `Connect` should only join LiveKit.
-- `Start Session` should request microphone permission, publish the microphone, and trigger the tutor warm-up.
+- Fresh empty `AI Chat` may auto-connect and play one short warm-up opener.
+- History Continue or resume-context chats should connect quietly until the learner speaks or sends text.
 
 Checks:
-1. If the tutor speaks immediately after `Connect`, check for old agent processes or duplicate rooms.
-2. Confirm iOS sends the start signal only from `LiveKitAgentClient.startConversation()`.
-3. Confirm the agent prompt does not auto-greet on room join.
+1. If History Continue speaks first, check whether `/session` sent resume context and whether the agent logged `has_context=true`.
+2. If two tutor voices are heard, check for stale `agent.py dev` processes or duplicate `./start_all.sh` terminals.
+3. If a fresh empty chat speaks more than one short opener, inspect the tutor prompt and start-signal handling.
 
 中文：
 预期行为：
-- `Connect` 只加入 LiveKit。
-- `Start Session` 才请求麦克风权限、发布麦克风并触发 tutor warm-up。
+- 全新空 `AI Chat` 可以自动连接并播放一句简短 warm-up。
+- History Continue 或带 resume context 的聊天应安静连接，直到学习者说话或发送文字。
 
 检查：
-1. 如果 `Connect` 后 tutor 立刻说话，先检查是否有旧 agent 进程或重复房间。
-2. 确认 iOS 只在 `LiveKitAgentClient.startConversation()` 中发送开始信号。
-3. 确认 agent prompt 没有设置入房自动问候。
+1. 如果 History Continue 先说话，检查 `/session` 是否发送了 resume context，以及 agent 日志是否显示 `has_context=true`。
+2. 如果听到两个 tutor 声音，检查是否有旧的 `agent.py dev` 进程或多个 `./start_all.sh` 终端。
+3. 如果全新空聊天说了不止一句短 opener，检查 tutor prompt 和 start-signal 处理。
 
 ## Tutor Does Not Respond
 
@@ -211,9 +213,10 @@ Symptoms:
 Checks:
 1. Confirm `Agent registered worker` exists in `logs/agent.log`.
 2. Confirm iOS `[test]` log room name matches `/session` and agent project.
-3. Confirm `Start Session` was tapped after `Connect`.
-4. Try text input once; if text works but voice does not, focus on microphone publish or STT.
-5. Check `logs/agent.log` for STT, LLM, TTS, or model errors.
+3. Confirm the Chat connection dot is green or that reconnect has completed.
+4. Confirm the learner actually spoke in Auto Voice/BG Auto, tapped send in Manual Voice, or sent a text fallback message.
+5. Try text input once; if text works but voice does not, focus on microphone publish or STT.
+6. Check `logs/agent.log` for STT, LLM, TTS, or model errors.
 
 中文：
 症状：
@@ -223,9 +226,10 @@ Checks:
 检查：
 1. 确认 `logs/agent.log` 有 `Agent registered worker`。
 2. 确认 iOS `[test]` 日志里的 room name 和 `/session`、agent project 一致。
-3. 确认 `Connect` 后点击过 `Start Session`。
-4. 尝试发送一次文字；如果文字有效但语音无效，重点排查麦克风 publish 或 STT。
-5. 查看 `logs/agent.log` 是否有 STT、LLM、TTS 或模型错误。
+3. 确认 Chat 标题连接圆点为绿色，或重连已经完成。
+4. 确认学习者在 Auto Voice/BG Auto 中确实说话、在 Manual Voice 中点击了发送，或发送过文字 fallback。
+5. 尝试发送一次文字；如果文字有效但语音无效，重点排查麦克风 publish 或 STT。
+6. 查看 `logs/agent.log` 是否有 STT、LLM、TTS 或模型错误。
 
 ## Choppy Tutor Voice
 
@@ -316,9 +320,9 @@ Expected behavior:
 
 Checks:
 1. Validate on a physical iPhone, not simulator.
-2. Start a session, then lock the screen or switch apps.
+2. Open `AI Chat`, long-press the mic and choose `BG Auto` if background speech is intended, then lock the screen or switch apps.
 3. Return to foreground and inspect `[test]` foreground audio/LiveKit snapshots.
-4. If audio stopped, tap `Reconnect`, then `Start Session` if needed.
+4. If audio stopped, tap `Reconnect`, then choose `BG Auto` again if background speech is still intended, or speak/send text in foreground.
 
 中文：
 预期行为：
@@ -327,9 +331,9 @@ Checks:
 
 检查：
 1. 使用真机验证，不用模拟器判断。
-2. 开始会话后锁屏或切 App。
+2. 进入 `AI Chat`，如果确实需要后台语音，长按麦克风选择 `BG Auto`，然后锁屏或切 App。
 3. 回前台查看 `[test]` foreground audio/LiveKit snapshot。
-4. 如果音频停止，点击 `Reconnect`，必要时再点击 `Start Session`。
+4. 如果音频停止，点击 `Reconnect`；如果仍需要后台语音，再次选择 `BG Auto`，否则回到前台后说话或发送文字 fallback。
 
 ## Before Submission
 

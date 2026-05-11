@@ -23,7 +23,7 @@ Own the V1 mobile learning experience for the English-speaking AI tutor: Home, l
 4. Learner opens AI Chat.
 5. Chat automatically requests `/session` with the selected learning profile and connects to LiveKit.
 6. For a fresh empty chat, the tutor gives one short warm-up opener after connection; for History Continue or resume-context reconnects, the tutor waits for learner input.
-7. Learner taps the microphone to start voice input. In `Auto Voice`, LiveKit continuously listens, auto-submits turns, and shows learner speech in chat as transcription arrives; tapping again or send stops it. In `Manual Voice`, the learner sees a waveform, taps `x` to cancel, and taps send to finish voice input; learner speech is buffered and only appears in chat/transcript after send. Text fallback remains available.
+7. Learner taps the microphone to start voice input. In default `Auto Voice`, LiveKit continuously listens while Chat is foreground, auto-submits turns, and shows learner speech in chat as transcription arrives; entering background stops foreground-only microphone input. In `BG Auto`, the learner explicitly allows active Chat voice to continue/start for background audio. In `Manual Voice`, the learner sees a waveform, taps `x` to cancel, and taps send to finish voice input; learner speech is buffered and only appears in chat/transcript after send. Text fallback remains available.
 8. If captured speech/transcript exists, the UI moves from `Listening` to `Tutor Thinking`; if no speech was captured, send exits voice mode without creating an empty message.
 9. The UI shows `Listening`, `Tutor Thinking`, `Tutor Speaking`, reconnect, end-session, and specific failure states.
 10. Chat list displays `You`, `Tutor`, and minimal `System` messages with statuses; non-error progress prompts stay out of the message list.
@@ -34,9 +34,9 @@ Own the V1 mobile learning experience for the English-speaking AI tutor: Home, l
 15. History shows recent sessions and review details.
 16. `Continue` from History starts a new room with the same learning profile plus short previous-session context for the tutor.
 17. History Continue keeps the original local chat id. Closing without new learner/tutor content leaves the record unchanged; new text or final voice/tutor transcript content updates the same History item instead of creating a duplicate list item.
-18. The Chat microphone button supports a long-press mode picker above the input bar. `Auto Voice` is the default and keeps LiveKit continuous microphone input active so STT/turn detection can auto-submit speech, including when the active Chat page enters background. `Manual Voice` keeps the current tap-record/send-to-finish behavior.
-19. Drawer actions can clear history or reset the default learning profile.
-20. Diagnostics shows secret-safe runtime information outside the main learning page.
+18. The Chat microphone button shows a small bottom-right `AUTO` / `BG` / `MAN` badge, and a lightweight tip above the input explains that long-pressing the microphone switches modes. Long-pressing the microphone opens the mode picker above the input bar. `Auto Voice` is the default foreground-only continuous mode. `BG Auto` is explicit opt-in for background continuous voice. `Manual Voice` keeps the current tap-record/send-to-finish behavior.
+19. Settings can edit a local Backend URL override, clear history, or reset the default learning profile.
+20. Diagnostics shows secret-safe runtime information outside the main learning page, including the effective backend URL and whether it came from the bundled build setting or a local override.
 21. Words Practice opens a dedicated vocabulary list from Home and each selected word launches a LiveKit chat practice session with voice/text turns.
 22. Words Practice sessions inject target-word coaching rules through learning profile + resume context so tutor feedback is structured, multi-turn, and includes word expansion.
 
@@ -47,7 +47,7 @@ Own the V1 mobile learning experience for the English-speaking AI tutor: Home, l
 4. 进入 AI Chat；
 5. Chat 自动携带学习配置请求 `/session` 并连接 LiveKit；
 6. 全新空聊天连接后 tutor 给一句简短 warm-up；History Continue 或 resume-context 重连会保持安静等待学习者继续；
-7. 学习者点击麦克风开始语音输入；`Auto Voice` 会持续监听、由 LiveKit 自动提交轮次，并在转写到达时立即把学习者语音展示到聊天列表；再次点击或点击发送会停止；`Manual Voice` 会显示音波，点击 `x` 取消，点击发送结束语音输入；学习者语音会先缓冲，只有点击发送后才进入聊天列表和 transcript；文字 fallback 仍可用；
+7. 学习者点击麦克风开始语音输入；默认 `Auto Voice` 只在 Chat 前台持续监听，由 LiveKit 自动提交轮次，并在转写到达时立即把学习者语音展示到聊天列表；进入后台会停止前台语音输入；`BG Auto` 是显式允许当前 Chat 后台连续语音的模式；`Manual Voice` 会显示音波，点击 `x` 取消，点击发送结束语音输入；学习者语音会先缓冲，只有点击发送后才进入聊天列表和 transcript；文字 fallback 仍可用；
 8. 如果已捕获语音/转写，UI 从 `Listening` 进入 `Tutor Thinking`；如果没有说话，点击发送只退出语音模式，不创建空消息；
 9. UI 展示 `Listening`、`Tutor Thinking`、`Tutor Speaking`、重连、结束和具体失败状态；
 10. 聊天列表展示 `You`、`Tutor` 和少量 `System` 消息及状态；非错误类进度提示不进入消息列表；
@@ -58,9 +58,9 @@ Own the V1 mobile learning experience for the English-speaking AI tutor: Home, l
 15. History 展示最近会话和复盘详情；
 16. 从 History 点击 `Continue` 会用相同学习配置开启新 room，并把上一轮短上下文传给 tutor；
 17. History Continue 保持原本地聊天 id；如果只是查看并退出，没有产生新的学习者/tutor 内容，原记录不变；有新文字或 final 语音/tutor 转写时，更新同一条 History item，而不是新增重复列表项；
-18. Chat 麦克风按钮支持长按，在输入栏上方弹出模式选择；`Auto Voice` 是默认模式，会保持 LiveKit 持续麦克风输入，让 STT/turn detection 自动提交语音，包括当前活跃 Chat 页进入后台时；`Manual Voice` 保留现在的点击录音、发送结束逻辑；
-19. Settings 可清空历史或重置默认学习配置；
-20. Diagnostics 在主学习页之外展示脱敏运行信息。
+18. Chat 麦克风按钮右下角会显示 `AUTO` / `BG` / `MAN` 小角标，输入栏上方用轻量 tip 提示长按麦克风可切换模式；长按麦克风会在输入栏上方弹出模式选择；`Auto Voice` 是默认的前台连续语音模式；`BG Auto` 是显式开启后台连续语音的模式；`Manual Voice` 保留现在的点击录音、发送结束逻辑；
+19. Settings 可编辑手机本地 Backend URL override、清空历史或重置默认学习配置；
+20. Diagnostics 在主学习页之外展示脱敏运行信息，包括当前实际使用的后端 URL 以及它来自 bundled build setting 还是本地 override；
 
 ## 4. Learning Profile
 V1 profile fields:
@@ -103,7 +103,7 @@ The profile is stored locally as the default, sent to backend `/session`, return
 - `SessionRecord`: Codable local record with metadata, learning profile, messages, transcript text, local summary, and optional AI summary.
 - `SessionResumeContext`: short Codable context generated from a previous local record for History Continue.
 - `SessionViewController` now tracks in-flight UI action tasks with same-kind mutual exclusion (`sessionControl` / `voiceControl` / `textSend`) and cancels active tasks when leaving Chat to reduce overlapping async actions.
-- `SessionViewModel` scopes Auto Voice background behavior to the active Chat lifecycle and avoids restarting an already-active microphone.
+- `SessionViewModel` stops foreground-only Auto Voice before background, scopes BG Auto behavior to the active Chat lifecycle, and avoids restarting an already-active microphone.
 - Chat failures are surfaced as transient top banner notifications (instead of persistent inline red text), while failure details still go into system messages and logs.
 
 中文：Home 负责入口展示；Session VC 只负责渲染和事件转发；ViewModel 负责会话编排、语音/文字输入、转写、摘要、错误和持久化；ViewState 是统一渲染模型；SessionRecord 是本地 Codable 记录；SessionResumeContext 用于从历史记录生成短上下文，让 Continue 能延续学习目标。
@@ -143,13 +143,15 @@ The profile is stored locally as the default, sent to backend `/session`, return
 - `LaunchScreen.storyboard` is required for full-screen launch on modern iPhones.
 - Simulator can use `127.0.0.1`; physical iPhone needs the Mac LAN IP.
 - `Info.plist` allows local-network HTTP development access and background audio for active voice sessions.
-- `Auto Voice` never asks for microphone permission while already in background. The learner must grant microphone access in the foreground first.
-- The background Auto Voice path is scoped to the active Chat page only; it does not run after back navigation, `End Session`, Home, History, Settings, or Diagnostics.
-- The main background path starts microphone publishing on `sceneWillResignActive`; `sceneDidEnterBackground` remains only a fallback diagnostic path.
+- `AppConfig` reads the bundled backend URL from `Info.plist` by default and supports an on-device backend URL override for installed-app launches without rebuilding.
+- `Auto Voice` is foreground-only by default and stops microphone input before background.
+- `BG Auto` never asks for microphone permission while already in background. The learner must grant microphone access in the foreground first.
+- The BG Auto path is scoped to the active Chat page only; it does not run after back navigation, `End Session`, Home, History, Settings, or Diagnostics.
+- The main BG Auto path starts microphone publishing on `sceneWillResignActive`; `sceneDidEnterBackground` remains only a fallback diagnostic path.
 - When returning from background with microphone input still active, Chat restarts the waveform animation so the visual state matches the active voice state.
 - Background mode is scoped to active audio sessions, not unlimited background execution.
 
-中文：App 使用 UIKit + SnapKit，不使用 SwiftUI；现代 iPhone 全屏启动依赖 `LaunchScreen.storyboard`；模拟器可用 `127.0.0.1`，真机需要 Mac 局域网 IP；`Info.plist` 支持本地 HTTP 开发访问和活跃语音会话后台音频；`Auto Voice` 不会在后台弹出麦克风权限请求，学习者必须先在前台授权；后台自动语音只作用于当前活跃 Chat 页，返回、`End Session`、Home、History、Settings 或 Diagnostics 都不会触发；后台主路径会在 `sceneWillResignActive` 提前发布麦克风，`sceneDidEnterBackground` 只作为兜底诊断；如果回到前台时麦克风仍处于活跃输入状态，Chat 会重启动音波动画，保证视觉状态和语音状态一致；后台能力不是无限后台执行。
+中文：App 使用 UIKit + SnapKit，不使用 SwiftUI；现代 iPhone 全屏启动依赖 `LaunchScreen.storyboard`；模拟器可用 `127.0.0.1`，真机需要 Mac 局域网 IP；`Info.plist` 支持本地 HTTP 开发访问和活跃语音会话后台音频；`AppConfig` 默认读取 `Info.plist` 里的 bundled backend URL，同时支持手机本地 Backend URL override，让已安装 App 不重新 build 也能修正 Mac IP；默认 `Auto Voice` 只在前台生效，进入后台前会停止麦克风输入；`BG Auto` 不会在后台弹出麦克风权限请求，学习者必须先在前台授权；后台自动语音只作用于当前活跃 Chat 页，返回、`End Session`、Home、History、Settings 或 Diagnostics 都不会触发；后台主路径会在 `sceneWillResignActive` 提前发布麦克风，`sceneDidEnterBackground` 只作为兜底诊断；如果回到前台时麦克风仍处于活跃输入状态，Chat 会重启动音波动画，保证视觉状态和语音状态一致；后台能力不是无限后台执行。
 
 ## 11. Validation
 Verified:
@@ -158,18 +160,18 @@ Verified:
 - ViewModel connect/start/reconnect/end/transcript behavior is covered by tests.
 - Storage latest-20 and clear-history behavior are covered by tests.
 - History Continue message restoration and no-duplicate-save-on-review-exit behavior are covered by tests.
-- Auto/Manual Voice behavior, Manual Voice buffered display-until-send, pre-background Auto Voice start, did-enter-background fallback, already-active microphone preservation, and active-Chat-only scoping are covered by ViewModel tests.
+- Auto/BG Auto/Manual Voice behavior, foreground Auto background stop, Manual Voice buffered display-until-send, pre-background BG Auto start, did-enter-background fallback, already-active microphone preservation, and active-Chat-only scoping are covered by ViewModel tests.
 - DTO decoding and failure state mapping are covered by tests.
 - Full voice loop: auto-connect, tap mic to show waveform, send voice input, tutor voice reply, end session.
 - AI Chat polish: title plus connection dot, tap message area to dismiss keyboard, auto reconnect after connection loss, back-button disconnect, bottom-sheet summary, right-aligned learner bubbles, compact input bar, foreground-resumed waveform, and keyboard-following message list.
 - Learner/tutor transcript stability.
-- Background audio behavior, including Auto Voice from the Chat mic mode picker and continuous LiveKit speech auto-submit on a physical device.
+- Background audio behavior, including explicit BG Auto from the Chat mic mode picker and continuous LiveKit speech auto-submit on a physical device.
 - Reconnect behavior after real network/audio interruptions.
 - Reconnect fallback to a new `/session` while keeping local messages visible.
 - History Continue with previous summary/transcript context.
 - Summary update after real transcript availability.
 
-中文：已验证 generic iOS Debug build、iPhone 17 simulator 单元测试，以及提交范围内的真机最终验证；测试覆盖 ViewModel、存储、DTO、失败状态、History Continue 消息恢复、只查看历史后退出不新增重复记录、Manual Voice 发送前缓冲展示，以及后台语音自动启动开关的开启/关闭行为。真机验证范围包括完整语音闭环、双方转写、后台音频、前台恢复音波动画、真实中断后的重连和真实 transcript 后的摘要更新。
+中文：已验证 generic iOS Debug build、iPhone 17 simulator 单元测试，以及提交范围内的真机最终验证；测试覆盖 ViewModel、存储、DTO、失败状态、History Continue 消息恢复、只查看历史后退出不新增重复记录、默认 Auto 入后台前停止、BG Auto 显式后台语音、Manual Voice 发送前缓冲展示，以及后台语音只作用于活跃 Chat 的行为。真机验证范围包括完整语音闭环、双方转写、显式 BG Auto 后台音频、前台恢复音波动画、真实中断后的重连和真实 transcript 后的摘要更新。
 
 ## 12. Dependencies
 - `AppEnvironment`
@@ -186,6 +188,8 @@ Verified:
 
 ## 13. Change Log
 - 2026-05-11: Marked final physical-device validation as passed for the submission scope and moved the AI Chat / background / transcript / History Continue checks into verified documentation.
+- 2026-05-11: Added `BG Auto` as explicit opt-in background continuous voice, made default `Auto Voice` foreground-only, and updated the mic badge to `AUTO` / `BG` / `MAN`.
+- 2026-05-11: Added an on-device Backend URL override in Settings and Diagnostics so an installed app can be opened from the iPhone Home Screen without relying on Xcode Run to rebuild the current Mac LAN IP.
 - 2026-05-11: Fixed foreground recovery for active voice input by restarting the waveform animation when Chat returns from background.
 - 2026-05-11: Changed `Manual Voice` transcript display so learner speech is buffered and only appears in chat/transcript after send, while `Auto Voice` still displays speech as transcription arrives.
 - 2026-05-11: Replaced persistent inline Chat error text with transient top-banner notifications to reduce visual noise while preserving failure details in system messages/logs.
@@ -193,7 +197,7 @@ Verified:
 - 2026-05-11: Added same-kind task mutual exclusion in Chat VC so repeated taps on reconnect/end/mic/send replace older in-flight tasks of the same action kind.
 - 2026-05-11: Upgraded Words Practice to LiveKit-based sessions with target-word context injection, structured score/correction/better-sentence/next-challenge feedback, and expansion-word guidance.
 - 2026-05-11: Moved voice mode control out of Settings/Customize into the Chat mic button long-press picker. `Auto Voice` is now the default; `Manual Voice` preserves the tap-record/send-to-finish flow.
-- 2026-05-11: Scoped Auto Voice background behavior to the active Chat page only and moved automatic microphone publishing to pre-background `sceneWillResignActive`, with `sceneDidEnterBackground` kept as a fallback diagnostic path.
+- 2026-05-11: Replaced implicit Auto Voice background behavior with explicit `BG Auto`; default `Auto Voice` now stops foreground microphone input before background, while `BG Auto` can publish/keep the microphone at pre-background `sceneWillResignActive`.
 - 2026-05-11: Enabled Words Practice as a real Home entry (not Coming Soon) with dedicated list/detail practice pages and local sentence feedback.
 - 2026-05-11: Updated Home/Drawer product flow to current IA (Customize, Diagnostics, Privacy, Clear History, Reset Learning Profile) and removed the old Settings text-page narrative.
 - 2026-05-11: Fixed History Continue restoration to fall back through saved messages, transcript text, resume-context transcript, and summary; also made continued practice update the original local history record instead of creating duplicate list items.
@@ -204,7 +208,7 @@ Verified:
 - 2026-05-11: Changed final AI summary generation so it can continue after leaving Chat and write back only if the saved session record still exists.
 - 2026-05-11: Made History Continue restore saved chat messages in the Chat list and changed the Chat Summary action to a bottom sheet.
 - 2026-05-11: Added reconnect fallback to a fresh backend session and History Continue with short previous-session context.
-- 2026-05-11: Updated AI Chat voice input to tap-to-record with waveform feedback, `x` cancel, send-to-finish, keyboard-following message list, and fewer non-error system prompts.
+- 2026-05-11: Updated AI Chat voice input from hold-to-speak into Chat-level voice modes: default foreground `Auto Voice`, explicit `BG Auto`, and `Manual Voice` with waveform feedback, `x` cancel, send-to-finish, keyboard-following message list, and fewer non-error system prompts.
 - 2026-05-11: Polished AI Chat into a chat-first layout with navigation title connection status, Summary button, right-aligned learner bubbles, compact mic/text/send input bar, back-button disconnect, and SDK-driven auto reconnect.
 - 2026-05-09: Added V1 Home, Learning Profile, History, Diagnostics, Settings, chat-style message list, profile-aware session creation, and profile-aware local records.
 - 2026-05-09: Changed Chat to auto-connect while keeping the tutor quiet until learner voice/text input.

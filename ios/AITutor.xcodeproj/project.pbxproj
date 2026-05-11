@@ -7,10 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		E00000000000000000000010 /* SessionViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E00000000000000000000002 /* SessionViewModelTests.swift */; };
-		E00000000000000000000011 /* SessionStorageManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E00000000000000000000003 /* SessionStorageManagerTests.swift */; };
-		E00000000000000000000012 /* SessionConfigDTOTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E00000000000000000000004 /* SessionConfigDTOTests.swift */; };
-		E00000000000000000000013 /* SessionStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E00000000000000000000005 /* SessionStateTests.swift */; };
+		D00000000000000000000014 /* LiveKit in Frameworks */ = {isa = PBXBuildFile; productRef = D00000000000000000000012 /* LiveKit */; };
+		D00000000000000000000015 /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = D00000000000000000000013 /* SnapKit */; };
 		D0000000000000000000002A /* AudioSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000016 /* AudioSessionManager.swift */; };
 		D0000000000000000000002B /* LiveKitAgentClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000017 /* LiveKitAgentClient.swift */; };
 		D0000000000000000000002C /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000018 /* AppConfig.swift */; };
@@ -31,8 +29,10 @@
 		D0000000000000000000003B /* SessionConfigDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000027 /* SessionConfigDTO.swift */; };
 		D0000000000000000000003C /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000029 /* LaunchScreen.storyboard */; };
 		D00000000000000000000060 /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000061 /* Icon.png */; };
-		D00000000000000000000014 /* LiveKit in Frameworks */ = {isa = PBXBuildFile; productRef = D00000000000000000000012 /* LiveKit */; };
-		D00000000000000000000015 /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = D00000000000000000000013 /* SnapKit */; };
+		E00000000000000000000010 /* SessionViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E00000000000000000000002 /* SessionViewModelTests.swift */; };
+		E00000000000000000000011 /* SessionStorageManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E00000000000000000000003 /* SessionStorageManagerTests.swift */; };
+		E00000000000000000000012 /* SessionConfigDTOTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E00000000000000000000004 /* SessionConfigDTOTests.swift */; };
+		E00000000000000000000013 /* SessionStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E00000000000000000000005 /* SessionStateTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,11 +47,6 @@
 
 /* Begin PBXFileReference section */
 		D00000000000000000000001 /* AITutor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AITutor.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		E00000000000000000000001 /* AITutorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AITutorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		E00000000000000000000002 /* SessionViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionViewModelTests.swift; sourceTree = "<group>"; };
-		E00000000000000000000003 /* SessionStorageManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStorageManagerTests.swift; sourceTree = "<group>"; };
-		E00000000000000000000004 /* SessionConfigDTOTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionConfigDTOTests.swift; sourceTree = "<group>"; };
-		E00000000000000000000005 /* SessionStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStateTests.swift; sourceTree = "<group>"; };
 		D00000000000000000000016 /* AudioSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSessionManager.swift; sourceTree = "<group>"; };
 		D00000000000000000000017 /* LiveKitAgentClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveKitAgentClient.swift; sourceTree = "<group>"; };
 		D00000000000000000000018 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
@@ -73,6 +68,11 @@
 		D00000000000000000000028 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D00000000000000000000029 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		D00000000000000000000061 /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
+		E00000000000000000000001 /* AITutorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AITutorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E00000000000000000000002 /* SessionViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionViewModelTests.swift; sourceTree = "<group>"; };
+		E00000000000000000000003 /* SessionStorageManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStorageManagerTests.swift; sourceTree = "<group>"; };
+		E00000000000000000000004 /* SessionConfigDTOTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionConfigDTOTests.swift; sourceTree = "<group>"; };
+		E00000000000000000000005 /* SessionStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStateTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -111,17 +111,6 @@
 				E00000000000000000000001 /* AITutorTests.xctest */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		E00000000000000000000006 /* AITutorTests */ = {
-			isa = PBXGroup;
-			children = (
-				E00000000000000000000004 /* SessionConfigDTOTests.swift */,
-				E00000000000000000000003 /* SessionStorageManagerTests.swift */,
-				E00000000000000000000005 /* SessionStateTests.swift */,
-				E00000000000000000000002 /* SessionViewModelTests.swift */,
-			);
-			path = AITutorTests;
 			sourceTree = "<group>";
 		};
 		D00000000000000000000004 /* AITutor */ = {
@@ -169,23 +158,6 @@
 			path = Core;
 			sourceTree = "<group>";
 		};
-		D00000000000000000000043 /* Features */ = {
-			isa = PBXGroup;
-			children = (
-				D00000000000000000000044 /* Session */,
-			);
-			path = Features;
-			sourceTree = "<group>";
-		};
-		D00000000000000000000049 /* Network */ = {
-			isa = PBXGroup;
-			children = (
-				D00000000000000000000026 /* BackendAPIClient.swift */,
-				D00000000000000000000027 /* SessionConfigDTO.swift */,
-			);
-			path = Network;
-			sourceTree = "<group>";
-		};
 		D00000000000000000000040 /* Errors */ = {
 			isa = PBXGroup;
 			children = (
@@ -208,6 +180,14 @@
 				D0000000000000000000001E /* AppDateFormatter.swift */,
 			);
 			path = Utilities;
+			sourceTree = "<group>";
+		};
+		D00000000000000000000043 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				D00000000000000000000044 /* Session */,
+			);
+			path = Features;
 			sourceTree = "<group>";
 		};
 		D00000000000000000000044 /* Session */ = {
@@ -254,6 +234,26 @@
 				D00000000000000000000025 /* SessionViewState.swift */,
 			);
 			path = ViewModel;
+			sourceTree = "<group>";
+		};
+		D00000000000000000000049 /* Network */ = {
+			isa = PBXGroup;
+			children = (
+				D00000000000000000000026 /* BackendAPIClient.swift */,
+				D00000000000000000000027 /* SessionConfigDTO.swift */,
+			);
+			path = Network;
+			sourceTree = "<group>";
+		};
+		E00000000000000000000006 /* AITutorTests */ = {
+			isa = PBXGroup;
+			children = (
+				E00000000000000000000004 /* SessionConfigDTOTests.swift */,
+				E00000000000000000000003 /* SessionStorageManagerTests.swift */,
+				E00000000000000000000005 /* SessionStateTests.swift */,
+				E00000000000000000000002 /* SessionViewModelTests.swift */,
+			);
+			path = AITutorTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -517,7 +517,7 @@
 				BACKEND_BASE_URL = "http://192.168.0.107:8000";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = MKDWSCTD3X;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AITutor/App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -525,7 +525,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = ai.jovida.ha;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shawn.aitutor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.10;
@@ -539,7 +539,7 @@
 				BACKEND_BASE_URL = "http://192.168.0.107:8000";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = MKDWSCTD3X;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AITutor/App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -547,7 +547,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = ai.jovida.ha;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shawn.aitutor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.10;

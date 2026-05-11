@@ -11,7 +11,7 @@ struct AppEnvironment {
 
     static func live() -> AppEnvironment {
         AppEnvironment(
-            backendClient: BackendAPIClient(baseURL: AppConfig.backendBaseURL),
+            backendClient: BackendAPIClient(baseURLProvider: { AppConfig.backendBaseURL }),
             agentClient: LiveKitAgentClient(),
             audioManager: AudioSessionManager(),
             sessionStorage: SessionStorageManager(),

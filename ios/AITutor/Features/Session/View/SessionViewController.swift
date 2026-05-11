@@ -653,8 +653,11 @@ final class SessionViewController: UIViewController, UITableViewDataSource {
     private let waveformView = VoiceWaveformView()
     private let sendButton = UIButton(type: .system)
     private let micButton = UIButton(type: .system)
+    private let micModeBadgeLabel = UILabel()
+    private let voiceModeTipLabel = UILabel()
     private let voiceModeMenuView = UIView()
     private let autoVoiceModeButton = UIButton(type: .system)
+    private let backgroundAutoVoiceModeButton = UIButton(type: .system)
     private let manualVoiceModeButton = UIButton(type: .system)
     private let reconnectButton = UIButton(type: .system)
     private let endButton = UIButton(type: .system)
@@ -728,12 +731,19 @@ final class SessionViewController: UIViewController, UITableViewDataSource {
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        if isMovingFromParent || navigationController?.isBeingDismissed == true {
+        if shouldEndSessionOnDisappear {
             cancelAllActionTasks()
             launchTask(kind: .sessionControl) { [weak self] in
                 await self?.viewModel.leaveChat()
             }
         }
+    }
+
+    private var shouldEndSessionOnDisappear: Bool {
+        let isUserNavigatingAway = isMovingFromParent || isBeingDismissed || navigationController?.isBeingDismissed == true
+        guard isUserNavigatingAway else { return false }
+        // Ignore transient disappear events during app lifecycle changes (inactive/background).
+        return UIApplication.shared.applicationState == .active
     }
 
     private func setupNavigationBar() {
@@ -811,9 +821,11 @@ final class SessionViewController: UIViewController, UITableViewDataSource {
         waveformView.isHidden = true
 
         configureIconButton(micButton, systemName: "mic.fill", tintColor: .systemBlue)
+        configureMicModeBadge()
         micButton.addTarget(self, action: #selector(onMicTapped), for: .touchUpInside)
         let micLongPress = UILongPressGestureRecognizer(target: self, action: #selector(onMicLongPressed(_:)))
         micButton.addGestureRecognizer(micLongPress)
+        configureVoiceModeTipLabel()
         configureIconButton(sendButton, systemName: "arrow.up.circle.fill", tintColor: .systemBlue)
         configureSecondary(reconnectButton, title: "Reconnect")
         configureSecondary(endButton, title: "End")
@@ -847,6 +859,7 @@ final class SessionViewController: UIViewController, UITableViewDataSource {
         rootStack.spacing = 10
         rootStack.addArrangedSubview(topStack)
         rootStack.addArrangedSubview(tableView)
+        rootStack.addArrangedSubview(voiceModeTipLabel)
         rootStack.addArrangedSubview(inputContainer)
         view.addSubview(rootStack)
         rootStack.snp.makeConstraints { make in
@@ -871,11 +884,13 @@ final class SessionViewController: UIViewController, UITableViewDataSource {
         voiceModeMenuView.layer.shadowOffset = CGSize(width: 0, height: 4)
 
         configureVoiceModeButton(autoVoiceModeButton, title: "Auto Voice", systemName: "waveform.circle.fill")
+        configureVoiceModeButton(backgroundAutoVoiceModeButton, title: "BG Auto", systemName: "moon.zzz.fill")
         configureVoiceModeButton(manualVoiceModeButton, title: "Manual Voice", systemName: "mic.fill")
         autoVoiceModeButton.addTarget(self, action: #selector(onSelectAutoVoiceMode), for: .touchUpInside)
+        backgroundAutoVoiceModeButton.addTarget(self, action: #selector(onSelectBackgroundAutoVoiceMode), for: .touchUpInside)
         manualVoiceModeButton.addTarget(self, action: #selector(onSelectManualVoiceMode), for: .touchUpInside)
 
-        let stack = UIStackView(arrangedSubviews: [autoVoiceModeButton, manualVoiceModeButton])
+        let stack = UIStackView(arrangedSubviews: [autoVoiceModeButton, backgroundAutoVoiceModeButton, manualVoiceModeButton])
         stack.axis = .vertical
         stack.spacing = 2
         voiceModeMenuView.addSubview(stack)
@@ -901,6 +916,31 @@ final class SessionViewController: UIViewController, UITableViewDataSource {
         button.contentHorizontalAlignment = .leading
     }
 
+    private func configureMicModeBadge() {
+        micModeBadgeLabel.font = .systemFont(ofSize: 8, weight: .bold)
+        micModeBadgeLabel.textAlignment = .center
+        micModeBadgeLabel.textColor = .white
+        micModeBadgeLabel.layer.cornerRadius = 6
+        micModeBadgeLabel.layer.masksToBounds = true
+        micModeBadgeLabel.adjustsFontSizeToFitWidth = true
+        micModeBadgeLabel.minimumScaleFactor = 0.7
+        micButton.addSubview(micModeBadgeLabel)
+        micModeBadgeLabel.snp.makeConstraints { make in
+            make.trailing.equalToSuperview().offset(4)
+            make.bottom.equalToSuperview().offset(1)
+            make.height.equalTo(13)
+            make.width.greaterThanOrEqualTo(24)
+        }
+    }
+
+    private func configureVoiceModeTipLabel() {
+        voiceModeTipLabel.font = .preferredFont(forTextStyle: .caption2)
+        voiceModeTipLabel.textColor = .tertiaryLabel
+        voiceModeTipLabel.numberOfLines = 1
+        voiceModeTipLabel.textAlignment = .center
+        voiceModeTipLabel.adjustsFontForContentSizeCategory = true
+    }
+
     private func bindViewModel() {
         viewModel.onStateChange = { [weak self] state in
             self?.render(state)
@@ -919,11 +959,12 @@ final class SessionViewController: UIViewController, UITableViewDataSource {
         sendButton.isEnabled = state.isTextInputEnabled
         micButton.isEnabled = state.isMicEnabled
         reconnectButton.isEnabled = state.isReconnectEnabled
-        reconnectButton.isHidden = !state.isReconnectEnabled
+        reconnectButton.isHidden = !state.isReconnectVisible
         endButton.isEnabled = state.isEndEnabled
         micButton.accessibilityLabel = state.micButtonTitle
         [sendButton, micButton].forEach { $0.alpha = $0.isEnabled ? 1 : 0.45 }
         updateMicButtonAppearance(for: state)
+        updateMicModeBadgeAndTip(for: state)
         updateVoiceModeMenuSelection(for: state.voiceInputMode)
         if state.isMicrophoneActive, !isVoiceInputMode {
             setVoiceInputMode(true)
@@ -937,24 +978,75 @@ final class SessionViewController: UIViewController, UITableViewDataSource {
     }
 
     private func updateMicButtonAppearance(for state: SessionViewState) {
+        if state.isPreparingMicrophone {
+            micButton.setImage(UIImage(systemName: "hourglass"), for: .normal)
+            micButton.tintColor = .systemOrange
+            micButton.accessibilityLabel = "\(state.voiceInputMode.displayName). Preparing microphone."
+            return
+        }
+
         let systemName: String
         switch (state.voiceInputMode, state.isMicrophoneActive) {
         case (.automatic, true):
             systemName = "stop.circle.fill"
         case (.automatic, false):
             systemName = "waveform.circle.fill"
+        case (.backgroundAutomatic, true):
+            systemName = "stop.circle.fill"
+        case (.backgroundAutomatic, false):
+            systemName = "moon.zzz.fill"
         case (.manual, true):
             systemName = "xmark.circle.fill"
         case (.manual, false):
             systemName = "mic.fill"
         }
         micButton.setImage(UIImage(systemName: systemName), for: .normal)
-        micButton.tintColor = state.voiceInputMode == .automatic ? .systemGreen : .systemBlue
+        micButton.tintColor = tintColor(for: state.voiceInputMode)
         micButton.accessibilityLabel = "\(state.voiceInputMode.displayName). \(state.micButtonTitle). Long press to switch voice mode."
+    }
+
+    private func updateMicModeBadgeAndTip(for state: SessionViewState) {
+        micModeBadgeLabel.text = badgeTitle(for: state.voiceInputMode)
+        micModeBadgeLabel.backgroundColor = tintColor(for: state.voiceInputMode)
+        voiceModeTipLabel.text = tipText(for: state.voiceInputMode)
+    }
+
+    private func badgeTitle(for mode: VoiceInputMode) -> String {
+        switch mode {
+        case .automatic:
+            return "AUTO"
+        case .backgroundAutomatic:
+            return "BG"
+        case .manual:
+            return "MAN"
+        }
+    }
+
+    private func tintColor(for mode: VoiceInputMode) -> UIColor {
+        switch mode {
+        case .automatic:
+            return .systemGreen
+        case .backgroundAutomatic:
+            return .systemOrange
+        case .manual:
+            return .systemBlue
+        }
+    }
+
+    private func tipText(for mode: VoiceInputMode) -> String {
+        switch mode {
+        case .automatic:
+            return "Auto Voice: free talk in Chat only. Long-press for BG/Manual."
+        case .backgroundAutomatic:
+            return "BG Auto: can continue in background. Long-press to switch."
+        case .manual:
+            return "Manual Voice: tap mic, speak, then send. Long-press to switch."
+        }
     }
 
     private func updateVoiceModeMenuSelection(for mode: VoiceInputMode) {
         updateVoiceModeButton(autoVoiceModeButton, selected: mode == .automatic)
+        updateVoiceModeButton(backgroundAutoVoiceModeButton, selected: mode == .backgroundAutomatic)
         updateVoiceModeButton(manualVoiceModeButton, selected: mode == .manual)
     }
 
@@ -1117,7 +1209,7 @@ final class SessionViewController: UIViewController, UITableViewDataSource {
         hideVoiceModeMenu(animated: true)
 
         switch viewModel.currentState.voiceInputMode {
-        case .automatic:
+        case .automatic, .backgroundAutomatic:
             launchTask(kind: .voiceControl) { [weak self] in
                 await self?.viewModel.toggleAutomaticVoiceInput()
             }
@@ -1151,6 +1243,14 @@ final class SessionViewController: UIViewController, UITableViewDataSource {
         hideVoiceModeMenu(animated: true)
         launchTask(kind: .voiceControl) { [weak self] in
             await self?.viewModel.setVoiceInputMode(.automatic)
+        }
+    }
+
+    @objc private func onSelectBackgroundAutoVoiceMode() {
+        didOpenVoiceModeMenu = false
+        hideVoiceModeMenu(animated: true)
+        launchTask(kind: .voiceControl) { [weak self] in
+            await self?.viewModel.setVoiceInputMode(.backgroundAutomatic)
         }
     }
 
@@ -1221,7 +1321,7 @@ final class SessionViewController: UIViewController, UITableViewDataSource {
         hideVoiceModeMenu(animated: true)
         if isVoiceInputMode {
             setVoiceInputMode(false)
-            if viewModel.currentState.voiceInputMode == .automatic {
+            if viewModel.currentState.voiceInputMode.usesContinuousVoice {
                 launchTask(kind: .voiceControl) { [weak self] in
                     await self?.viewModel.toggleAutomaticVoiceInput()
                 }
@@ -1893,6 +1993,8 @@ final class DiagnosticsViewController: UIViewController {
         let profile = environment.learningProfileStore.loadDefaultProfile()
         return """
         Backend URL: \(AppConfig.backendBaseURL.absoluteString)
+        Backend URL source: \(AppConfig.backendBaseURLSourceDescription)
+        Bundled backend URL: \(AppConfig.bundledBackendBaseURL.absoluteString)
         Tutor subject: english-speaking
         LiveKit URL: available after /session
         Room: \(latest?.roomName ?? "none")
@@ -1918,12 +2020,14 @@ final class DiagnosticsViewController: UIViewController {
 @MainActor
 final class SettingsViewController: UITableViewController {
     private enum Item: Int, CaseIterable {
+        case backendURL
         case privacy
         case clearHistory
         case resetProfile
 
         var title: String {
             switch self {
+            case .backendURL: return "Backend URL"
             case .privacy: return "Privacy"
             case .clearHistory: return "Clear History"
             case .resetProfile: return "Reset Learning Profile"
@@ -1932,6 +2036,8 @@ final class SettingsViewController: UITableViewController {
 
         var subtitle: String {
             switch self {
+            case .backendURL:
+                return AppConfig.backendBaseURL.absoluteString
             case .privacy:
                 return "What is stored locally and what is not stored."
             case .clearHistory:
@@ -1983,6 +2089,8 @@ final class SettingsViewController: UITableViewController {
         tableView.deselectRow(at: indexPath, animated: true)
         guard let item = Item(rawValue: indexPath.row) else { return }
         switch item {
+        case .backendURL:
+            onEditBackendURL()
         case .privacy:
             navigationController?.pushViewController(PrivacyViewController(), animated: true)
         case .clearHistory:
@@ -1990,6 +2098,46 @@ final class SettingsViewController: UITableViewController {
         case .resetProfile:
             onResetProfile()
         }
+    }
+
+    private func onEditBackendURL() {
+        let alert = UIAlertController(
+            title: "Backend URL",
+            message: "Use your Mac LAN URL, for example http://192.168.0.102:8000. This local override works when opening the installed app without Xcode Run.",
+            preferredStyle: .alert
+        )
+        alert.addTextField { textField in
+            textField.text = AppConfig.backendBaseURL.absoluteString
+            textField.placeholder = "http://<mac-lan-ip>:8000"
+            textField.keyboardType = .URL
+            textField.autocapitalizationType = .none
+            textField.autocorrectionType = .no
+            textField.clearButtonMode = .whileEditing
+        }
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Use Bundled", style: .default, handler: { [weak self] _ in
+            AppConfig.clearBackendBaseURLOverride()
+            self?.tableView.reloadData()
+        }))
+        alert.addAction(UIAlertAction(title: "Save", style: .default, handler: { [weak self, weak alert] _ in
+            let value = alert?.textFields?.first?.text ?? ""
+            guard AppConfig.setBackendBaseURLOverride(value) else {
+                self?.showInvalidBackendURLAlert()
+                return
+            }
+            self?.tableView.reloadData()
+        }))
+        present(alert, animated: true)
+    }
+
+    private func showInvalidBackendURLAlert() {
+        let alert = UIAlertController(
+            title: "Invalid URL",
+            message: "Please enter a URL like http://192.168.0.102:8000.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
     }
 
     private func onClearHistory() {

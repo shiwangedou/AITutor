@@ -41,9 +41,11 @@ final class SessionViewModel {
     private var manualVoiceDraftText: String?
     private var hasNewSessionContent = false
     private var autoReconnectAttempts = 0
+    private var isMicrophoneWarmupRecoveryInFlight = false
     private let incrementalSummaryTurnThreshold = 4
     private let incrementalSummaryMinInterval: TimeInterval = 20
     private let maxAutoReconnectAttempts = 2
+    private let microphoneStartRetryDelay: UInt64 = 350_000_000
     private var transcriptHandlerID: UUID?
     private var connectionHandlerID: UUID?
 
@@ -151,12 +153,15 @@ final class SessionViewModel {
     }
 
     func startSession() async {
+        guard !state.isPreparingMicrophone else { return }
         guard currentConfig != nil else {
             handleFailure("Start failed", error: AppError.sessionTokenFailed("No active session config"), category: .session)
             return
         }
 
         do {
+            state.isPreparingMicrophone = true
+            publish()
             appendInfo("Audio before permission: \(audioManager.diagnosticSummary())", category: .audio)
             let permission = await audioManager.requestMicrophonePermission()
             appendInfo("Microphone permission: \(permission.rawValue)", category: .audio)
@@ -166,21 +171,30 @@ final class SessionViewModel {
 
             try audioManager.configureForVoiceChat()
             appendInfo("Audio configured: \(audioManager.diagnosticSummary())", category: .audio)
-            try await agentClient.startMicrophone()
+            do {
+                try await agentClient.startMicrophone()
+            } catch {
+                appendInfo("Microphone publish first attempt failed. Retrying once.", category: .audio)
+                try? await Task.sleep(nanoseconds: microphoneStartRetryDelay)
+                try await agentClient.startMicrophone()
+            }
             if sessionStartedAt == nil {
                 sessionStartedAt = Date()
             }
             hasVoiceInputInCurrentRecording = false
             resetManualVoiceDraft()
             state.isMicrophoneActive = true
+            state.isPreparingMicrophone = false
             state.runningSummaryText = "Draft waiting for transcript. It will update after 4 final turns."
             setSessionState(.listening)
             state.primaryHint = ""
             appendInfo("Microphone is active. Tutor will respond after learner speech.", category: .livekit)
             scheduleMicrophoneWarmupCheck()
         } catch {
+            state.isPreparingMicrophone = false
             handleFailure("Start failed", error: error, category: .session)
             appendError("Audio after failure: \(audioManager.diagnosticSummary())", category: .audio)
+            publish()
         }
     }
 
@@ -193,6 +207,7 @@ final class SessionViewModel {
         cancelMicrophoneWarmupCheck()
         await agentClient.stopMicrophone()
         state.isMicrophoneActive = false
+        state.isPreparingMicrophone = false
         let flushedManualVoice = flushManualVoiceDraftIfNeeded()
         if hasVoiceInputInCurrentRecording || flushedManualVoice {
             setSessionState(.tutorThinking)
@@ -211,6 +226,7 @@ final class SessionViewModel {
         cancelMicrophoneWarmupCheck()
         await agentClient.stopMicrophone()
         state.isMicrophoneActive = false
+        state.isPreparingMicrophone = false
         hasVoiceInputInCurrentRecording = false
         resetManualVoiceDraft()
         setSessionState(.connected)
@@ -417,6 +433,8 @@ final class SessionViewModel {
         isLeavingChat = false
         autoReconnectTask?.cancel()
         suppressAutoReconnect = false
+        state.isReconnectVisible = false
+        state.isReconnectEnabled = false
         appendInfo("Reconnect requested.", category: .session)
         setSessionState(.reconnecting)
         suppressAutoReconnect = true
@@ -474,7 +492,7 @@ final class SessionViewModel {
         refreshVoiceInputPresentation()
         appendInfo("Voice input mode set to \(mode.displayName).", category: .session)
 
-        if previousMode == .automatic, mode == .manual, state.isMicrophoneActive {
+        if previousMode.usesContinuousVoice, mode == .manual, state.isMicrophoneActive {
             await agentClient.stopMicrophone()
             state.isMicrophoneActive = false
             hasVoiceInputInCurrentRecording = false
@@ -482,7 +500,7 @@ final class SessionViewModel {
             if state.sessionState == .listening {
                 setSessionState(.connected)
             }
-            appendInfo("Automatic continuous voice stopped after switching to Manual Voice.", category: .audio)
+            appendInfo("Continuous voice stopped after switching to Manual Voice.", category: .audio)
         }
         publish()
     }
@@ -492,6 +510,7 @@ final class SessionViewModel {
             cancelMicrophoneWarmupCheck()
             await agentClient.stopMicrophone()
             state.isMicrophoneActive = false
+            state.isPreparingMicrophone = false
             hasVoiceInputInCurrentRecording = false
             resetManualVoiceDraft()
             setSessionState(.connected)
@@ -501,7 +520,7 @@ final class SessionViewModel {
 
         await startSession()
         if state.sessionState == .listening {
-            appendInfo("Automatic continuous voice started. LiveKit STT/turn detection will auto-submit speech.", category: .audio)
+            appendInfo("\(appSettings.voiceInputMode.displayName) started. LiveKit STT/turn detection will auto-submit speech.", category: .audio)
         }
     }
 
@@ -536,6 +555,7 @@ final class SessionViewModel {
             publish()
         case .disconnected:
             state.isMicrophoneActive = false
+            state.isPreparingMicrophone = false
             guard !suppressAutoReconnect, state.sessionState != .ended else {
                 state.connectionText = "Disconnected"
                 publish()
@@ -553,6 +573,7 @@ final class SessionViewModel {
         guard currentConfig != nil else { return }
         guard autoReconnectAttempts < maxAutoReconnectAttempts else {
             state.primaryHint = ""
+            state.isReconnectVisible = true
             state.isReconnectEnabled = true
             publish()
             return
@@ -774,9 +795,10 @@ final class SessionViewModel {
 
     private func handleSceneWillResignActive() async {
         guard isChatLifecycleActive, canSendInput else { return }
-        appendInfo("App will resign active during LiveKit session. Preparing background continuous voice if enabled.", category: .session)
-        guard appSettings.voiceInputMode == .automatic else {
-            appendInfo("Manual Voice is selected. The app will not open the microphone automatically for background speech.", category: .session)
+        appendInfo("App will resign active during LiveKit session. Checking whether Background Auto is enabled.", category: .session)
+        guard appSettings.voiceInputMode.opensMicrophoneForBackground else {
+            appendInfo("\(appSettings.voiceInputMode.displayName) is selected. The app will not keep or open the microphone for background speech.", category: .session)
+            await stopForegroundOnlyVoiceBeforeBackgroundIfNeeded(trigger: "willResignActive")
             return
         }
         await startBackgroundContinuousVoiceIfPossible(trigger: "willResignActive")
@@ -786,11 +808,30 @@ final class SessionViewModel {
         guard isChatLifecycleActive, canSendInput else { return }
         appendInfo("App entered background during active LiveKit session. Background audio mode should keep an already-active LiveKit voice session alive.", category: .session)
         appendInfo("Background audio snapshot: \(audioManager.diagnosticSummary())", category: .audio)
-        guard appSettings.voiceInputMode == .automatic else {
-            appendInfo("Manual Voice is selected. Existing active audio may continue, but the app will not open the microphone automatically.", category: .session)
+        guard appSettings.voiceInputMode.opensMicrophoneForBackground else {
+            appendInfo("\(appSettings.voiceInputMode.displayName) is selected. Background microphone is disabled for this mode.", category: .session)
+            await stopForegroundOnlyVoiceBeforeBackgroundIfNeeded(trigger: "didEnterBackgroundFallback")
             return
         }
         await startBackgroundContinuousVoiceIfPossible(trigger: "didEnterBackgroundFallback")
+    }
+
+    private func stopForegroundOnlyVoiceBeforeBackgroundIfNeeded(trigger: String) async {
+        guard state.isMicrophoneActive || agentClient.isMicrophoneStarted else { return }
+        cancelMicrophoneWarmupCheck()
+        await agentClient.stopMicrophone()
+        state.isMicrophoneActive = false
+        hasVoiceInputInCurrentRecording = false
+        if appSettings.voiceInputMode == .manual {
+            resetManualVoiceDraft()
+        }
+        if state.sessionState == .listening {
+            setSessionState(.connected)
+        } else {
+            refreshVoiceInputPresentation()
+            publish()
+        }
+        appendInfo("Stopped foreground-only microphone before background. trigger=\(trigger)", category: .audio)
     }
 
     private func startBackgroundContinuousVoiceIfPossible(trigger: String) async {
@@ -799,7 +840,7 @@ final class SessionViewModel {
         defer { backgroundVoiceAutoStartInFlight = false }
 
         guard currentConfig != nil, agentClient.isConnected else {
-            appendInfo("Auto Voice background start skipped because LiveKit is not connected.", category: .livekit)
+            appendInfo("Background Auto start skipped because LiveKit is not connected.", category: .livekit)
             return
         }
         if state.isMicrophoneActive || agentClient.isMicrophoneStarted {
@@ -808,9 +849,9 @@ final class SessionViewModel {
         }
 
         let permission = audioManager.microphonePermissionStatus()
-        appendInfo("Auto Voice background permission=\(permission.rawValue)", category: .audio)
+        appendInfo("Background Auto permission=\(permission.rawValue)", category: .audio)
         guard permission == .granted else {
-            appendInfo("Auto Voice needs microphone permission first. Open Chat in foreground and tap the microphone once.", category: .audio)
+            appendInfo("Background Auto needs microphone permission first. Open Chat in foreground and tap the microphone once.", category: .audio)
             return
         }
 
@@ -823,11 +864,12 @@ final class SessionViewModel {
             hasVoiceInputInCurrentRecording = false
             resetManualVoiceDraft()
             state.isMicrophoneActive = true
+            state.isPreparingMicrophone = false
             setSessionState(.listening)
             state.primaryHint = ""
             appendInfo("Background continuous voice opened the microphone before suspension. LiveKit STT/turn detection will auto-submit speech. trigger=\(trigger)", category: .audio)
         } catch {
-            appendError("Auto Voice background start failed: \(AppLogger.describe(error))", category: .audio)
+            appendError("Background Auto start failed: \(AppLogger.describe(error))", category: .audio)
         }
     }
 
@@ -836,7 +878,6 @@ final class SessionViewModel {
         appendInfo("App returned foreground. Check voice continuity; use Reconnect if LiveKit audio stopped.", category: .session)
         appendInfo("Foreground audio snapshot: \(audioManager.diagnosticSummary())", category: .audio)
         appendInfo("Foreground LiveKit snapshot: \(agentClient.diagnosticSummary)", category: .livekit)
-        state.isReconnectEnabled = true
         if !agentClient.isConnected {
             state.errorText = "Foreground recovery recommended: LiveKit state looks inactive."
         }
@@ -1081,8 +1122,19 @@ final class SessionViewModel {
         state.isConnectEnabled = next == .idle || next == .ended || next.isFailure
         state.isStartEnabled = next == .connected || next == .inSession || next == .tutorThinking || next == .tutorSpeaking
         state.isMicEnabled = state.isStartEnabled || next == .listening
+        if state.isPreparingMicrophone {
+            state.isMicEnabled = false
+        }
         state.isEndEnabled = next == .connected || next == .inSession || next == .listening || next == .tutorThinking || next == .tutorSpeaking || next.isFailure
-        state.isReconnectEnabled = next == .reconnecting || next.isFailure
+        if next == .reconnecting {
+            state.isReconnectVisible = false
+            state.isReconnectEnabled = false
+        } else if !next.isFailure {
+            state.isReconnectVisible = false
+            state.isReconnectEnabled = false
+        } else if !state.isReconnectVisible {
+            state.isReconnectEnabled = false
+        }
         state.isTextInputEnabled = next == .connected || next == .inSession || next == .listening || next == .tutorThinking || next == .tutorSpeaking
         publish()
     }
@@ -1091,7 +1143,9 @@ final class SessionViewModel {
         state.voiceInputMode = appSettings.voiceInputMode
         switch state.voiceInputMode {
         case .automatic:
-            state.micButtonTitle = state.isMicrophoneActive ? "Stop automatic voice" : "Start automatic voice"
+            state.micButtonTitle = state.isMicrophoneActive ? "Stop auto voice" : "Start auto voice"
+        case .backgroundAutomatic:
+            state.micButtonTitle = state.isMicrophoneActive ? "Stop background auto voice" : "Start background auto voice"
         case .manual:
             state.micButtonTitle = state.isMicrophoneActive ? "Cancel voice input" : "Start manual voice input"
         }
@@ -1142,24 +1196,36 @@ final class SessionViewModel {
     private func scheduleMicrophoneWarmupCheck() {
         cancelMicrophoneWarmupCheck()
         microphoneWarmupTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            try? await Task.sleep(nanoseconds: 8_000_000_000)
             guard let self, !Task.isCancelled else { return }
             guard self.state.isMicrophoneActive, self.state.sessionState == .listening, !self.hasVoiceInputInCurrentRecording else { return }
-
-            self.appendInfo("No learner transcript detected after microphone start. Retrying microphone publish once.", category: .audio)
-            do {
-                await self.agentClient.stopMicrophone()
-                try await self.agentClient.startMicrophone()
-                self.appendInfo("Microphone publish retried successfully.", category: .audio)
-            } catch {
-                self.appendError("Microphone publish retry failed: \(AppLogger.describe(error))", category: .audio)
-            }
+            self.appendInfo("No learner transcript detected yet after microphone start. Trying one automatic microphone refresh.", category: .audio)
+            await self.performMicrophoneWarmupRecoveryIfNeeded()
         }
     }
 
     private func cancelMicrophoneWarmupCheck() {
         microphoneWarmupTask?.cancel()
         microphoneWarmupTask = nil
+    }
+
+    private func performMicrophoneWarmupRecoveryIfNeeded() async {
+        guard !isMicrophoneWarmupRecoveryInFlight else { return }
+        guard state.isMicrophoneActive, state.sessionState == .listening, !hasVoiceInputInCurrentRecording else { return }
+
+        isMicrophoneWarmupRecoveryInFlight = true
+        defer { isMicrophoneWarmupRecoveryInFlight = false }
+
+        await agentClient.stopMicrophone()
+        try? await Task.sleep(nanoseconds: 250_000_000)
+        do {
+            try await agentClient.startMicrophone()
+            appendInfo("Automatic microphone refresh completed. Speak again now.", category: .audio)
+        } catch {
+            appendError("Automatic microphone refresh failed: \(AppLogger.describe(error)). Tap mic once to retry.", category: .audio)
+            state.errorText = "Voice input was not ready. Tap mic once to retry."
+            publish()
+        }
     }
 
     private func bufferManualVoiceTranscript(_ update: TranscriptUpdate) {

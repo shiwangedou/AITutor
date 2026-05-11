@@ -117,15 +117,26 @@ final class LearningProfileStore: LearningProfileStoring {
 
 enum VoiceInputMode: String, Codable, CaseIterable, Equatable {
     case automatic
+    case backgroundAutomatic = "background_automatic"
     case manual
 
     var displayName: String {
         switch self {
         case .automatic:
             return "Auto Voice"
+        case .backgroundAutomatic:
+            return "Background Auto"
         case .manual:
             return "Manual Voice"
         }
+    }
+
+    var usesContinuousVoice: Bool {
+        self != .manual
+    }
+
+    var opensMicrophoneForBackground: Bool {
+        self == .backgroundAutomatic
     }
 }
 

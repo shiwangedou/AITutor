@@ -75,11 +75,16 @@ struct SummaryGenerationResponse: Codable, Equatable {
 }
 
 final class BackendAPIClient: BackendAPIClientProtocol {
-    private let baseURL: URL
+    private let baseURLProvider: () -> URL
     private let urlSession: URLSession
 
     init(baseURL: URL, urlSession: URLSession = .shared) {
-        self.baseURL = baseURL
+        self.baseURLProvider = { baseURL }
+        self.urlSession = urlSession
+    }
+
+    init(baseURLProvider: @escaping () -> URL, urlSession: URLSession = .shared) {
+        self.baseURLProvider = baseURLProvider
         self.urlSession = urlSession
     }
 
@@ -88,6 +93,7 @@ final class BackendAPIClient: BackendAPIClientProtocol {
         learningProfile: LearningProfile = .default,
         resumeContext: SessionResumeContext? = nil
     ) async throws -> SessionConfig {
+        let baseURL = baseURLProvider()
         var request = URLRequest(url: baseURL.appendingPathComponent("session"))
         request.httpMethod = "POST"
         request.timeoutInterval = 15
@@ -128,6 +134,7 @@ final class BackendAPIClient: BackendAPIClientProtocol {
     }
 
     func generateSummary(_ requestBody: SummaryGenerationRequest) async throws -> SummaryGenerationResponse {
+        let baseURL = baseURLProvider()
         var request = URLRequest(url: baseURL.appendingPathComponent("summary"))
         request.httpMethod = "POST"
         request.timeoutInterval = 30
@@ -158,6 +165,7 @@ final class BackendAPIClient: BackendAPIClientProtocol {
     }
 
     func generateIncrementalSummary(_ requestBody: IncrementalSummaryGenerationRequest) async throws -> SummaryGenerationResponse {
+        let baseURL = baseURLProvider()
         var request = URLRequest(url: baseURL.appendingPathComponent("summary/incremental"))
         request.httpMethod = "POST"
         request.timeoutInterval = 30
